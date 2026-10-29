@@ -57,7 +57,9 @@
         "invoice_voided": "Invoice voided successfully.",
         "payments_retrieved": "Payments retrieved successfully.",
         "payment_created": "Payment recorded successfully.",
-        "payment_deleted": "Payment removed successfully."
+        "payment_deleted": "Payment removed successfully.",
+        "invoice_emails_retrieved": "Email delivery history retrieved successfully.",
+        "invoice_email_sent": "Invoice email sent successfully."
     },
     "billing": {
         "customer_tax_id_conflict": "A customer with tax id '{tax_id}' already exists in this organization.",
@@ -69,7 +71,10 @@
         "invoice_due_date_required": "A due date is required when issuing a credit (crédito) invoice.",
         "invoice_has_payments": "Void is blocked while the invoice has recorded payments.",
         "invoice_not_payable": "Payments can only be recorded on open issued invoices.",
-        "payment_exceeds_balance": "Payment amount exceeds the open balance ({balance})."
+        "payment_exceeds_balance": "Payment amount exceeds the open balance ({balance}).",
+        "invoice_not_emailable": "Draft and void invoices cannot be emailed.",
+        "invoice_email_required": "Customer has no email. Provide a destination address.",
+        "invoice_email_failed": "Failed to send invoice email ({error})."
     },
     "media": {
         "invalid_type": "Avatar must be a JPEG, PNG, or WebP image.",
@@ -108,7 +113,14 @@
         "invitation_subject": "You have been invited to a Nidus workspace",
         "invitation_body": "You have been invited to collaborate in Nidus. Click this link to accept your invitation: {link}",
         "password_reset_subject": "Reset your Nidus password",
-        "password_reset_body": "We received a request to reset your password. Click this link to choose a new one: {link}"
+        "password_reset_body": "We received a request to reset your password. Click this link to choose a new one: {link}",
+        "invoice_subject": "Invoice {document_number}",
+        "invoice_body": "Hello {customer_name},\n\nPlease find attached invoice {document_number} for {total}.\n\nThe PDF is attached to this email.",
+        "invoice_greeting": "Hello {customer_name},",
+        "invoice_intro": "We are sending you invoice <strong>{document_number}</strong>. A PDF copy is attached for your records.",
+        "invoice_amount_label": "Amount due",
+        "invoice_attachment_note": "The invoice PDF is attached to this message.",
+        "invoice_footer": "This message was sent by Nidus Billing. If you were not expecting this invoice, please contact the sender."
     },
     "organization": {
         "slug_already_exists": "The workspace URL (slug) is already taken."

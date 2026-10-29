@@ -8,20 +8,24 @@ import { NidusScope } from "@/shared/access/scopes";
 import { Badge } from "@/shared/ui/badge";
 import { Button } from "@/shared/ui/button";
 import { formatMoney, formatPercent } from "../lib/format";
-import { Invoice } from "../types/invoice";
+import { Invoice, InvoiceEmailDelivery } from "../types/invoice";
 
 interface InvoiceDetailDialogProps {
   isOpen: boolean;
   onClose: (open: boolean) => void;
   invoice: Invoice | null;
+  emailDeliveries?: InvoiceEmailDelivery[];
   onEditDraft?: (invoice: Invoice) => void;
+  onSendEmail?: () => void;
 }
 
 export function InvoiceDetailDialog({
   isOpen,
   onClose,
   invoice,
+  emailDeliveries = [],
   onEditDraft,
+  onSendEmail,
 }: InvoiceDetailDialogProps) {
   const t = useTranslations("BillingInvoices");
 
@@ -237,9 +241,46 @@ export function InvoiceDetailDialog({
               </ul>
             </section>
           )}
+
+          <section className="px-6 py-4 border-t">
+            <h4 className="text-xs uppercase tracking-wide text-muted-foreground mb-3">
+              {t("emailsTitle")}
+            </h4>
+            {emailDeliveries.length === 0 ? (
+              <p className="text-sm text-muted-foreground">{t("emailsEmpty")}</p>
+            ) : (
+              <ul className="space-y-2 text-sm">
+                {emailDeliveries.map((delivery) => (
+                  <li
+                    key={delivery.id}
+                    className="flex flex-wrap items-center justify-between gap-2 border-b border-border/40 pb-2 last:border-0"
+                  >
+                    <span className="text-muted-foreground">
+                      {delivery.to_email} · {t(`emailStatus.${delivery.status}`)}
+                      {delivery.sent_at
+                        ? ` · ${new Date(delivery.sent_at).toLocaleString("es-CR")}`
+                        : ""}
+                    </span>
+                    {delivery.error_message && (
+                      <span className="text-destructive text-xs">
+                        {delivery.error_message}
+                      </span>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
         </article>
 
         <div className="flex justify-end gap-2">
+          {onSendEmail && (
+            <CanAccess scope={NidusScope.INVOICE_WRITE}>
+              <Button type="button" variant="secondary" onClick={onSendEmail}>
+                {t("emailAction")}
+              </Button>
+            </CanAccess>
+          )}
           {invoice.status === "draft" && onEditDraft && (
             <CanAccess scope={NidusScope.INVOICE_WRITE}>
               <Button

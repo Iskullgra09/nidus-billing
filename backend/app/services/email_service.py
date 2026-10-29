@@ -1,4 +1,5 @@
 from email.message import EmailMessage
+from typing import Optional, Sequence
 from urllib.parse import urljoin
 
 import aiosmtplib
@@ -6,23 +7,35 @@ import aiosmtplib
 from app.core.config import settings
 from app.core.i18n.service import i18n
 
+# (filename, content_bytes, mime_main, mime_sub) e.g. ("a.pdf", b"...", "application", "pdf")
+Attachment = tuple[str, bytes, str, str]
+
 
 class EmailService:
     @staticmethod
-    async def _send_email(to_email: str, subject: str, text_content: str, html_content: str) -> None:
+    async def _send_email(
+        to_email: str,
+        subject: str,
+        text_content: str,
+        html_content: str,
+        attachments: Optional[Sequence[Attachment]] = None,
+    ) -> str:
         """
-        Core async function to send emails via SMTP.
-        Falls back to a styled terminal print if SMTP variables are not set (Great for local dev).
+        Send via SMTP. Returns "mocked" when SMTP creds are empty (local/dev),
+        otherwise "sent". Raises on real SMTP failure.
         """
         if not settings.SMTP_USER or not settings.SMTP_PASSWORD:
             print("\n" + "=" * 60)
             print(f" MOCK EMAIL DISPATCHED TO : {to_email}")
             print("-" * 60)
             print(f" SUBJECT : {subject}")
+            if attachments:
+                names = ", ".join(name for name, *_ in attachments)
+                print(f" ATTACH  : {names}")
             print("-" * 60)
             print(f"{text_content}")
             print("=" * 60 + "\n")
-            return
+            return "mocked"
 
         message = EmailMessage()
         message["From"] = f"{settings.EMAIL_FROM_NAME} <{settings.EMAIL_FROM_ADDRESS}>"
@@ -31,24 +44,27 @@ class EmailService:
         message.set_content(text_content)
         message.add_alternative(html_content, subtype="html")
 
-        try:
-            await aiosmtplib.send(
-                message,
-                hostname=settings.SMTP_HOST,
-                port=settings.SMTP_PORT,
-                username=settings.SMTP_USER,
-                password=settings.SMTP_PASSWORD,
-                start_tls=True,
-                timeout=10,
+        for filename, content, maintype, subtype in attachments or []:
+            message.add_attachment(
+                content,
+                maintype=maintype,
+                subtype=subtype,
+                filename=filename,
             )
-        except Exception as e:
-            print(f"Failed to send email to {to_email}: {str(e)}")
+
+        await aiosmtplib.send(
+            message,
+            hostname=settings.SMTP_HOST,
+            port=settings.SMTP_PORT,
+            username=settings.SMTP_USER,
+            password=settings.SMTP_PASSWORD,
+            start_tls=True,
+            timeout=10,
+        )
+        return "sent"
 
     @staticmethod
     async def send_invitation_email(email: str, token: str, lang: str = "en") -> None:
-        """
-        Constructs and sends a localized workspace invitation email.
-        """
         frontend_str = str(settings.FRONTEND_URL)
         base_url = frontend_str if frontend_str.endswith("/") else f"{frontend_str}/"
         invite_link = urljoin(base_url, f"invite?token={token}")
@@ -69,9 +85,6 @@ class EmailService:
 
     @staticmethod
     async def send_password_reset_email(email: str, token: str, lang: str = "en") -> None:
-        """
-        Constructs and sends a localized password reset email.
-        """
         frontend_str = str(settings.FRONTEND_URL)
         base_url = frontend_str if frontend_str.endswith("/") else f"{frontend_str}/"
         reset_link = urljoin(base_url, f"reset-password?token={token}")
@@ -90,3 +103,21 @@ class EmailService:
         """
 
         await EmailService._send_email(email, subject, body_text, body_html)
+
+    @staticmethod
+    async def send_invoice_email(
+        *,
+        to_email: str,
+        subject: str,
+        text_content: str,
+        html_content: str,
+        pdf_bytes: bytes,
+        pdf_filename: str,
+    ) -> str:
+        return await EmailService._send_email(
+            to_email,
+            subject,
+            text_content,
+            html_content,
+            attachments=[(pdf_filename, pdf_bytes, "application", "pdf")],
+        )

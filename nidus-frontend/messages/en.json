@@ -233,6 +233,15 @@
     "issueAction": "Issue",
     "voidAction": "Void",
     "pdfAction": "PDF",
+    "emailAction": "Send email",
+    "emailPrompt": "Destination email (blank = customer email):",
+    "emailsTitle": "Email deliveries",
+    "emailsEmpty": "This invoice has not been emailed yet.",
+    "emailStatus": {
+      "sent": "Sent",
+      "failed": "Failed",
+      "mocked": "Mocked (dev)"
+    },
     "paymentAction": "Record payment",
     "paymentPrompt": "Payment amount (balance {balance}):",
     "deleteConfirm": "Delete this draft invoice?",

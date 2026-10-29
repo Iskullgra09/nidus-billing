@@ -292,3 +292,46 @@ async def test_invoice_overdue_flag(auth_client: Tuple[AsyncClient, Dict[str, An
     assert body["status"] == "issued"
     assert body["is_overdue"] is True
     assert body["balance_due"] == "80.0000"
+
+
+@pytest.mark.asyncio
+async def test_invoice_send_email(auth_client: Tuple[AsyncClient, Dict[str, Any]]) -> None:
+    client, _ = auth_client
+
+    customer_res = await client.post(
+        "/api/v1/billing/customers",
+        json={"name": "Mail Co", "email": "mail@acme.example"},
+    )
+    customer_id = customer_res.json()["data"]["id"]
+
+    draft = await client.post(
+        "/api/v1/billing/invoices",
+        json={
+            "customer_id": customer_id,
+            "payment_condition": "contado",
+            "lines": [{"description": "Mailing", "quantity": "1", "unit_price": "40"}],
+        },
+    )
+    invoice_id = draft.json()["data"]["id"]
+
+    blocked = await client.post(f"/api/v1/billing/invoices/{invoice_id}/send-email", json={})
+    assert blocked.status_code == 400
+
+    await client.post(f"/api/v1/billing/invoices/{invoice_id}/issue")
+
+    sent = await client.post(f"/api/v1/billing/invoices/{invoice_id}/send-email", json={})
+    assert sent.status_code == 201
+    delivery = sent.json()["data"]
+    assert delivery["to_email"] == "mail@acme.example"
+    assert delivery["status"] in {"sent", "mocked"}
+
+    override = await client.post(
+        f"/api/v1/billing/invoices/{invoice_id}/send-email",
+        json={"to_email": "other@acme.example"},
+    )
+    assert override.status_code == 201
+    assert override.json()["data"]["to_email"] == "other@acme.example"
+
+    listed = await client.get(f"/api/v1/billing/invoices/{invoice_id}/emails")
+    assert listed.status_code == 200
+    assert len(listed.json()["data"]) >= 2

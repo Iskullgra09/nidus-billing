@@ -23,3 +23,9 @@ class PaymentMethod(StrEnum):
     TRANSFER = "transfer"
     CARD = "card"
     OTHER = "other"
+
+
+class InvoiceEmailStatus(StrEnum):
+    SENT = "sent"
+    FAILED = "failed"
+    MOCKED = "mocked"

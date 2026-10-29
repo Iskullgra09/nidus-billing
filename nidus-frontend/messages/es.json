@@ -233,6 +233,15 @@
     "issueAction": "Emitir",
     "voidAction": "Anular",
     "pdfAction": "PDF",
+    "emailAction": "Enviar email",
+    "emailPrompt": "Correo destino (vacío = email del cliente):",
+    "emailsTitle": "Envíos por correo",
+    "emailsEmpty": "Aún no se ha enviado esta factura por correo.",
+    "emailStatus": {
+      "sent": "Enviado",
+      "failed": "Fallido",
+      "mocked": "Simulado (dev)"
+    },
     "paymentAction": "Registrar pago",
     "paymentPrompt": "Monto del pago (saldo {balance}):",
     "deleteConfirm": "¿Eliminar este borrador?",

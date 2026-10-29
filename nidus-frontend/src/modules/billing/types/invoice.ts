@@ -31,6 +31,28 @@ export interface InvoicePayment {
   updated_at: string;
 }
 
+export type InvoiceEmailStatus = "sent" | "failed" | "mocked";
+
+export interface InvoiceEmailDelivery {
+  id: string;
+  organization_id: string;
+  invoice_id: string;
+  to_email: string;
+  subject: string;
+  status: InvoiceEmailStatus;
+  error_message: string | null;
+  sent_at: string | null;
+  actor_user_id: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface InvoiceSendEmailPayload {
+  to_email?: string | null;
+  subject?: string | null;
+  message?: string | null;
+}
+
 export interface InvoiceListItem {
   id: string;
   organization_id: string;

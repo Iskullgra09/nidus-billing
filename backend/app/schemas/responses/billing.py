@@ -118,3 +118,19 @@ class InvoiceListItem(BaseModel):
     updated_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class InvoiceEmailDeliveryResponse(BaseModel):
+    id: UUID
+    organization_id: UUID
+    invoice_id: UUID
+    to_email: str
+    subject: str
+    status: str
+    error_message: Optional[str] = None
+    sent_at: Optional[datetime] = None
+    actor_user_id: Optional[UUID] = None
+    created_at: datetime
+    updated_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)

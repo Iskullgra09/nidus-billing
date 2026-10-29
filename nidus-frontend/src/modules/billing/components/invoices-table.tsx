@@ -9,6 +9,7 @@ import {
   Banknote,
   Eye,
   FileDown,
+  Mail,
   MoreHorizontal,
   Pencil,
   Plus,
@@ -30,7 +31,7 @@ import { CanAccess } from "@/modules/access/components/can-access";
 import { NidusScope } from "@/shared/access/scopes";
 import { formatMoney } from "../lib/format";
 import { Party, PageInfo } from "../types/party";
-import { Invoice, InvoiceListItem } from "../types/invoice";
+import { Invoice, InvoiceEmailDelivery, InvoiceListItem } from "../types/invoice";
 import { InvoiceDetailDialog } from "./invoice-detail-dialog";
 import { InvoiceFormDialog } from "./invoice-form-dialog";
 import {
@@ -39,7 +40,9 @@ import {
   deleteInvoiceAction,
   downloadInvoicePdfAction,
   getInvoiceAction,
+  getInvoiceEmailsAction,
   issueInvoiceAction,
+  sendInvoiceEmailAction,
   updateInvoiceAction,
   voidInvoiceAction,
 } from "../actions/invoices";
@@ -66,6 +69,9 @@ export function InvoicesTable({
   const [dialogOpen, setDialogOpen] = React.useState(false);
   const [detailOpen, setDetailOpen] = React.useState(false);
   const [selected, setSelected] = React.useState<Invoice | null>(null);
+  const [emailDeliveries, setEmailDeliveries] = React.useState<InvoiceEmailDelivery[]>(
+    [],
+  );
 
   const replaceQuery = (mutate: (params: URLSearchParams) => void) => {
     const params = new URLSearchParams(searchParams.toString());
@@ -91,7 +97,9 @@ export function InvoicesTable({
   const openView = async (row: InvoiceListItem) => {
     const full = await loadInvoice(row);
     if (!full) return;
+    const emails = await getInvoiceEmailsAction(row.id);
     setSelected(full);
+    setEmailDeliveries(emails);
     setDetailOpen(true);
   };
 
@@ -152,6 +160,16 @@ export function InvoicesTable({
     const blob = new Blob([bytes], { type: "application/pdf" });
     const url = URL.createObjectURL(blob);
     window.open(url, "_blank", "noopener,noreferrer");
+  };
+
+  const handleSendEmail = async (row: InvoiceListItem) => {
+    const override = window.prompt(t("emailPrompt"), "");
+    if (override === null) return;
+    const result = await sendInvoiceEmailAction(row.id, {
+      to_email: override.trim() || null,
+    });
+    if (result.status === "success") toast.success(result.message);
+    else toast.error(result.message);
   };
 
   const statusVariant = (status: string) => {
@@ -242,6 +260,14 @@ export function InvoicesTable({
                     </DropdownMenuItem>
                   </>
                 )}
+                {(row.status === "issued" ||
+                  row.status === "partial" ||
+                  row.status === "paid") && (
+                  <DropdownMenuItem onClick={() => void handleSendEmail(row)}>
+                    <Mail className="size-4" />
+                    {t("emailAction")}
+                  </DropdownMenuItem>
+                )}
                 {(row.status === "issued" || row.status === "partial") && (
                   <>
                     <DropdownMenuItem onClick={() => void handlePayment(row)}>
@@ -315,7 +341,16 @@ export function InvoicesTable({
         isOpen={detailOpen}
         onClose={setDetailOpen}
         invoice={selected}
+        emailDeliveries={emailDeliveries}
         onEditDraft={openEditFromDetail}
+        onSendEmail={
+          selected &&
+          (selected.status === "issued" ||
+            selected.status === "partial" ||
+            selected.status === "paid")
+            ? () => void handleSendEmail(selected)
+            : undefined
+        }
       />
 
       <InvoiceFormDialog

@@ -42,6 +42,7 @@ class AuditAction(StrEnum):
     INVOICE_VOID = "invoice.void"
     INVOICE_PAYMENT_CREATE = "invoice_payment.create"
     INVOICE_PAYMENT_DELETE = "invoice_payment.delete"
+    INVOICE_EMAIL_SEND = "invoice_email.send"
 
 
 class AuditResourceType(StrEnum):
@@ -56,3 +57,4 @@ class AuditResourceType(StrEnum):
     ITEM = "item"
     INVOICE = "invoice"
     INVOICE_PAYMENT = "invoice_payment"
+    INVOICE_EMAIL = "invoice_email"
