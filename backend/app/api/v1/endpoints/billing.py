@@ -10,10 +10,13 @@ from app.core.i18n.service import i18n
 from app.core.rate_limit import RateLimit
 from app.models.billing.enums import HaciendaEnvironment
 from app.models.identity.scopes import NidusScope
-from app.schemas.filters.billing import InvoiceFilter, ItemFilter, PartyFilter
+from app.schemas.filters.billing import InboundFilter, InvoiceFilter, ItemFilter, PartyFilter
 from app.schemas.requests.billing import (
     FiscalProfileUpsert,
     HaciendaCredentialUpsert,
+    InboundDocumentCreate,
+    InboundDocumentLink,
+    InboundRejectRequest,
     InvoiceCreate,
     InvoicePaymentCreate,
     InvoiceSendEmail,
@@ -28,6 +31,7 @@ from app.schemas.responses.base import GenericResponse
 from app.schemas.responses.billing import (
     FiscalProfileResponse,
     HaciendaCredentialStatusResponse,
+    InboundDocumentResponse,
     InvoiceEmailDeliveryResponse,
     InvoiceFiscalResponse,
     InvoiceListItem,
@@ -41,6 +45,7 @@ from app.services.billing import (
     CustomerService,
     FiscalService,
     HaciendaEmitService,
+    HaciendaInboundService,
     InvoiceEmailService,
     InvoiceService,
     ItemService,
@@ -650,3 +655,168 @@ async def delete_hacienda_credentials(
         data=data,
         message=i18n.t("success.hacienda_credentials_deleted", lang=lang),
     )
+
+
+def _actor_user_id(payload: dict[str, Any]) -> UUID:
+    actor_raw = payload.get("sub")
+    if not actor_raw:
+        raise AuthenticationError()
+    return UUID(str(actor_raw))
+
+
+@router.get(
+    "/inbound-documents",
+    response_model=GenericResponse[CursorPage[InboundDocumentResponse]],
+    dependencies=[Depends(ScopeGuard(NidusScope.INBOUND_READ))],
+)
+async def list_inbound_documents(
+    pagination: CursorParams = Depends(),
+    filters: InboundFilter = Depends(),
+    session: AsyncSession = Depends(get_current_tenant_session),
+    lang: str = Depends(get_language),
+):
+    data = await HaciendaInboundService.list_documents(session, pagination, filters)
+    return GenericResponse(data=data, message=i18n.t("success.inbound_list", lang=lang))
+
+
+@router.get(
+    "/inbound-documents/{document_id}",
+    response_model=GenericResponse[InboundDocumentResponse],
+    dependencies=[Depends(ScopeGuard(NidusScope.INBOUND_READ))],
+)
+async def get_inbound_document(
+    document_id: UUID,
+    session: AsyncSession = Depends(get_current_tenant_session),
+    payload: dict[str, Any] = Depends(get_jwt_payload),
+    lang: str = Depends(get_language),
+):
+    org_id = _require_org_id(payload)
+    data = await HaciendaInboundService.get_document(session, org_id, document_id)
+    return GenericResponse(data=data, message=i18n.t("success.inbound_retrieved", lang=lang))
+
+
+@router.post(
+    "/inbound-documents",
+    response_model=GenericResponse[InboundDocumentResponse],
+    status_code=status.HTTP_201_CREATED,
+    dependencies=[
+        Depends(ScopeGuard(NidusScope.INBOUND_WRITE)),
+        Depends(RateLimit("billing.inbound_create", tier="strict")),
+    ],
+)
+async def create_inbound_document(
+    body: InboundDocumentCreate,
+    session: AsyncSession = Depends(get_current_tenant_session),
+    payload: dict[str, Any] = Depends(get_jwt_payload),
+    lang: str = Depends(get_language),
+):
+    org_id = _require_org_id(payload)
+    data = await HaciendaInboundService.create_from_xml(
+        session,
+        org_id,
+        body,
+        actor_user_id=_actor_user_id(payload),
+        ip_address=None,
+    )
+    return GenericResponse(data=data, message=i18n.t("success.inbound_created", lang=lang))
+
+
+@router.patch(
+    "/inbound-documents/{document_id}",
+    response_model=GenericResponse[InboundDocumentResponse],
+    dependencies=[Depends(ScopeGuard(NidusScope.INBOUND_WRITE))],
+)
+async def link_inbound_document(
+    document_id: UUID,
+    body: InboundDocumentLink,
+    session: AsyncSession = Depends(get_current_tenant_session),
+    payload: dict[str, Any] = Depends(get_jwt_payload),
+    lang: str = Depends(get_language),
+):
+    org_id = _require_org_id(payload)
+    data = await HaciendaInboundService.link_supplier(
+        session,
+        org_id,
+        document_id,
+        body,
+        actor_user_id=_actor_user_id(payload),
+        ip_address=None,
+    )
+    return GenericResponse(data=data, message=i18n.t("success.inbound_linked", lang=lang))
+
+
+@router.post(
+    "/inbound-documents/{document_id}/accept-hacienda",
+    response_model=GenericResponse[InboundDocumentResponse],
+    dependencies=[
+        Depends(ScopeGuard(NidusScope.INBOUND_WRITE)),
+        Depends(RateLimit("billing.inbound_accept", tier="strict")),
+    ],
+)
+async def accept_inbound_document(
+    document_id: UUID,
+    session: AsyncSession = Depends(get_current_tenant_session),
+    payload: dict[str, Any] = Depends(get_jwt_payload),
+    lang: str = Depends(get_language),
+):
+    org_id = _require_org_id(payload)
+    data = await HaciendaInboundService.accept(
+        session,
+        org_id,
+        document_id,
+        actor_user_id=_actor_user_id(payload),
+        ip_address=None,
+    )
+    return GenericResponse(data=data, message=i18n.t("success.inbound_accepted", lang=lang))
+
+
+@router.post(
+    "/inbound-documents/{document_id}/reject-hacienda",
+    response_model=GenericResponse[InboundDocumentResponse],
+    dependencies=[
+        Depends(ScopeGuard(NidusScope.INBOUND_WRITE)),
+        Depends(RateLimit("billing.inbound_reject", tier="strict")),
+    ],
+)
+async def reject_inbound_document(
+    document_id: UUID,
+    body: InboundRejectRequest,
+    session: AsyncSession = Depends(get_current_tenant_session),
+    payload: dict[str, Any] = Depends(get_jwt_payload),
+    lang: str = Depends(get_language),
+):
+    org_id = _require_org_id(payload)
+    data = await HaciendaInboundService.reject(
+        session,
+        org_id,
+        document_id,
+        reason=body.reason,
+        actor_user_id=_actor_user_id(payload),
+        ip_address=None,
+    )
+    return GenericResponse(data=data, message=i18n.t("success.inbound_rejected", lang=lang))
+
+
+@router.post(
+    "/inbound-documents/{document_id}/verify-hacienda",
+    response_model=GenericResponse[InboundDocumentResponse],
+    dependencies=[
+        Depends(ScopeGuard(NidusScope.INBOUND_WRITE)),
+        Depends(RateLimit("billing.inbound_verify", tier="strict")),
+    ],
+)
+async def verify_inbound_document(
+    document_id: UUID,
+    session: AsyncSession = Depends(get_current_tenant_session),
+    payload: dict[str, Any] = Depends(get_jwt_payload),
+    lang: str = Depends(get_language),
+):
+    org_id = _require_org_id(payload)
+    data = await HaciendaInboundService.verify(
+        session,
+        org_id,
+        document_id,
+        actor_user_id=_actor_user_id(payload),
+        ip_address=None,
+    )
+    return GenericResponse(data=data, message=i18n.t("success.inbound_verified", lang=lang))

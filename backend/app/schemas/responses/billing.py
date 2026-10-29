@@ -199,3 +199,38 @@ class InvoiceFiscalResponse(BaseModel):
 
     model_config = ConfigDict(from_attributes=True)
 
+
+class InboundDocumentResponse(BaseModel):
+    id: UUID
+    organization_id: UUID
+    supplier_id: Optional[UUID] = None
+    supplier_name: Optional[str] = None
+    clave: str
+    consecutive: Optional[str] = None
+    document_type: str
+    status: str
+    ingest_channel: str
+    emitter_identification_type: Optional[str] = None
+    emitter_identification_number: Optional[str] = None
+    emitter_name: Optional[str] = None
+    emitter_email: Optional[str] = None
+    issued_at: Optional[datetime] = None
+    currency: str
+    exchange_rate: Optional[Decimal] = None
+    subtotal: Decimal
+    tax_total: Decimal
+    total: Decimal
+    mensaje_tipo: Optional[str] = None
+    mensaje_detalle: Optional[str] = None
+    mensaje_submitted_at: Optional[datetime] = None
+    mh_response_at: Optional[datetime] = None
+    mh_status_raw: Optional[str] = None
+    mh_message: Optional[str] = None
+    mock_mode: bool
+    notes: Optional[str] = None
+    received_at: date
+    created_at: datetime
+    updated_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
+

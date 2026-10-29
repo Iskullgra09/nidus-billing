@@ -67,7 +67,14 @@
         "hacienda_credentials_deleted": "Credenciales de Hacienda eliminadas exitosamente.",
         "invoice_fiscal_retrieved": "Estado fiscal de Hacienda recuperado exitosamente.",
         "invoice_fiscal_emitted": "Factura enviada a Hacienda exitosamente.",
-        "invoice_fiscal_verified": "Estado de Hacienda actualizado exitosamente."
+        "invoice_fiscal_verified": "Estado de Hacienda actualizado exitosamente.",
+        "inbound_list": "Documentos entrantes obtenidos correctamente.",
+        "inbound_retrieved": "Documento entrante obtenido correctamente.",
+        "inbound_created": "Documento entrante registrado correctamente.",
+        "inbound_linked": "Proveedor vinculado al documento entrante.",
+        "inbound_accepted": "Aceptación enviada a Hacienda.",
+        "inbound_rejected": "Rechazo enviado a Hacienda.",
+        "inbound_verified": "Estado Hacienda del entrante actualizado."
     },
     "billing": {
         "customer_tax_id_conflict": "Ya existe un cliente con el tax id '{tax_id}' en esta organización.",
@@ -87,6 +94,11 @@
         "hacienda_p12_required": "Sube un certificado .p12 antes de emitir en vivo a Hacienda.",
         "hacienda_sign_failed": "No se pudo firmar el XML FE ({error}).",
         "hacienda_sign_required": "La emisión en vivo requiere una firma XAdES exitosa.",
+        "inbound_xml_invalid": "No se pudo leer el XML FE entrante ({error}).",
+        "inbound_clave_exists": "Ya existe un documento entrante con esta clave.",
+        "inbound_already_answered": "Este documento ya tiene una aceptación o rechazo enviado.",
+        "inbound_reject_reason_required": "Indica el motivo del rechazo antes de enviar a Hacienda.",
+        "inbound_not_submitted": "Acepta o rechaza el documento antes de verificar en Hacienda.",
         "invoice_no_lines": "Agrega al menos una línea antes de emitir la factura.",
         "invoice_due_date_required": "La fecha de vencimiento es obligatoria al emitir una factura a crédito.",
         "invoice_has_payments": "No se puede anular mientras la factura tenga pagos registrados.",

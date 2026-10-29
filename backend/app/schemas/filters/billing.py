@@ -25,3 +25,11 @@ class InvoiceFilter(BaseModel):
     customer_id: Optional[str] = None
 
     model_config = ConfigDict(populate_by_name=True)
+
+
+class InboundFilter(BaseModel):
+    q: Optional[str] = Field(default=None, description="Search clave or emitter name/tax id")
+    status: Optional[str] = None
+    supplier_id: Optional[str] = None
+
+    model_config = ConfigDict(populate_by_name=True)

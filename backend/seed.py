@@ -99,6 +99,8 @@ CUSTOM_ROLE = {
         NidusScope.INVOICE_WRITE.value,
         NidusScope.FISCAL_READ.value,
         NidusScope.FISCAL_WRITE.value,
+        NidusScope.INBOUND_READ.value,
+        NidusScope.INBOUND_WRITE.value,
     ],
 }
 

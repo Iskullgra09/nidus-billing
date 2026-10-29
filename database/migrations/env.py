@@ -27,6 +27,7 @@ from app.models.billing.fiscal_profile import OrganizationFiscalProfile  # type:
 from app.models.billing.hacienda_credential import OrganizationHaciendaCredential  # type: ignore
 from app.models.billing.invoice import Invoice, InvoiceLine  # type: ignore
 from app.models.billing.invoice_email import InvoiceEmailDelivery  # type: ignore
+from app.models.billing.inbound_document import InboundFiscalDocument  # type: ignore
 from app.models.billing.invoice_fiscal import InvoiceFiscal  # type: ignore
 from app.models.billing.item import Item  # type: ignore
 
