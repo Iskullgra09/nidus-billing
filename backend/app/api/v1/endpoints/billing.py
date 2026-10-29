@@ -1,20 +1,40 @@
 from typing import Any
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, Response, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import ScopeGuard, get_current_tenant_session, get_jwt_payload, get_language
 from app.core.exceptions.base import AuthenticationError
 from app.core.i18n.service import i18n
 from app.models.identity.scopes import NidusScope
-from app.schemas.filters.billing import ItemFilter, PartyFilter
-from app.schemas.requests.billing import ItemCreate, ItemUpdate, PartyCreate, PartyUpdate
+from app.schemas.filters.billing import InvoiceFilter, ItemFilter, PartyFilter
+from app.schemas.requests.billing import (
+    InvoiceCreate,
+    InvoicePaymentCreate,
+    InvoiceUpdate,
+    ItemCreate,
+    ItemUpdate,
+    PartyCreate,
+    PartyUpdate,
+)
 from app.schemas.requests.pagination import CursorParams
 from app.schemas.responses.base import GenericResponse
-from app.schemas.responses.billing import ItemResponse, PartyResponse
+from app.schemas.responses.billing import (
+    InvoiceListItem,
+    InvoicePaymentResponse,
+    InvoiceResponse,
+    ItemResponse,
+    PartyResponse,
+)
 from app.schemas.responses.pagination import CursorPage
-from app.services.billing import CustomerService, ItemService, SupplierService
+from app.services.billing import (
+    CustomerService,
+    InvoiceService,
+    ItemService,
+    PaymentService,
+    SupplierService,
+)
 
 router = APIRouter()
 
@@ -249,3 +269,167 @@ async def delete_item(
 ):
     await ItemService.delete_item(session, item_id)
     return GenericResponse(message=i18n.t("success.item_deleted", lang=lang))
+
+
+@router.get(
+    "/invoices",
+    response_model=GenericResponse[CursorPage[InvoiceListItem]],
+    dependencies=[Depends(ScopeGuard(NidusScope.INVOICE_READ))],
+)
+async def list_invoices(
+    pagination: CursorParams = Depends(),
+    filters: InvoiceFilter = Depends(),
+    session: AsyncSession = Depends(get_current_tenant_session),
+    lang: str = Depends(get_language),
+):
+    data = await InvoiceService.list_invoices(session, pagination, filters)
+    return GenericResponse(data=data, message=i18n.t("success.invoices_retrieved", lang=lang))
+
+
+@router.post(
+    "/invoices",
+    response_model=GenericResponse[InvoiceResponse],
+    status_code=status.HTTP_201_CREATED,
+    dependencies=[Depends(ScopeGuard(NidusScope.INVOICE_WRITE))],
+)
+async def create_invoice(
+    data: InvoiceCreate,
+    session: AsyncSession = Depends(get_current_tenant_session),
+    payload: dict[str, Any] = Depends(get_jwt_payload),
+    lang: str = Depends(get_language),
+):
+    org_id = _require_org_id(payload)
+    invoice = await InvoiceService.create_invoice(session, org_id, data)
+    return GenericResponse(data=invoice, message=i18n.t("success.invoice_created", lang=lang))
+
+
+@router.get(
+    "/invoices/{invoice_id}",
+    response_model=GenericResponse[InvoiceResponse],
+    dependencies=[Depends(ScopeGuard(NidusScope.INVOICE_READ))],
+)
+async def get_invoice(
+    invoice_id: UUID,
+    session: AsyncSession = Depends(get_current_tenant_session),
+    lang: str = Depends(get_language),
+):
+    invoice = await InvoiceService.get_invoice(session, invoice_id)
+    return GenericResponse(data=invoice, message=i18n.t("success.invoice_retrieved", lang=lang))
+
+
+@router.patch(
+    "/invoices/{invoice_id}",
+    response_model=GenericResponse[InvoiceResponse],
+    dependencies=[Depends(ScopeGuard(NidusScope.INVOICE_WRITE))],
+)
+async def update_invoice(
+    invoice_id: UUID,
+    data: InvoiceUpdate,
+    session: AsyncSession = Depends(get_current_tenant_session),
+    lang: str = Depends(get_language),
+):
+    invoice = await InvoiceService.update_invoice(session, invoice_id, data)
+    return GenericResponse(data=invoice, message=i18n.t("success.invoice_updated", lang=lang))
+
+
+@router.delete(
+    "/invoices/{invoice_id}",
+    response_model=GenericResponse[None],
+    dependencies=[Depends(ScopeGuard(NidusScope.INVOICE_WRITE))],
+)
+async def delete_invoice(
+    invoice_id: UUID,
+    session: AsyncSession = Depends(get_current_tenant_session),
+    lang: str = Depends(get_language),
+):
+    await InvoiceService.delete_invoice(session, invoice_id)
+    return GenericResponse(message=i18n.t("success.invoice_deleted", lang=lang))
+
+
+@router.post(
+    "/invoices/{invoice_id}/issue",
+    response_model=GenericResponse[InvoiceResponse],
+    dependencies=[Depends(ScopeGuard(NidusScope.INVOICE_WRITE))],
+)
+async def issue_invoice(
+    invoice_id: UUID,
+    session: AsyncSession = Depends(get_current_tenant_session),
+    lang: str = Depends(get_language),
+):
+    invoice = await InvoiceService.issue_invoice(session, invoice_id)
+    return GenericResponse(data=invoice, message=i18n.t("success.invoice_issued", lang=lang))
+
+
+@router.post(
+    "/invoices/{invoice_id}/void",
+    response_model=GenericResponse[InvoiceResponse],
+    dependencies=[Depends(ScopeGuard(NidusScope.INVOICE_WRITE))],
+)
+async def void_invoice(
+    invoice_id: UUID,
+    session: AsyncSession = Depends(get_current_tenant_session),
+    lang: str = Depends(get_language),
+):
+    invoice = await InvoiceService.void_invoice(session, invoice_id)
+    return GenericResponse(data=invoice, message=i18n.t("success.invoice_voided", lang=lang))
+
+
+@router.get(
+    "/invoices/{invoice_id}/pdf",
+    dependencies=[Depends(ScopeGuard(NidusScope.INVOICE_READ))],
+)
+async def download_invoice_pdf(
+    invoice_id: UUID,
+    session: AsyncSession = Depends(get_current_tenant_session),
+):
+    pdf = await InvoiceService.render_pdf(session, invoice_id)
+    return Response(
+        content=pdf,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'inline; filename="invoice-{invoice_id}.pdf"'},
+    )
+
+
+@router.get(
+    "/invoices/{invoice_id}/payments",
+    response_model=GenericResponse[list[InvoicePaymentResponse]],
+    dependencies=[Depends(ScopeGuard(NidusScope.INVOICE_READ))],
+)
+async def list_invoice_payments(
+    invoice_id: UUID,
+    session: AsyncSession = Depends(get_current_tenant_session),
+    lang: str = Depends(get_language),
+):
+    data = await PaymentService.list_payments(session, invoice_id)
+    return GenericResponse(data=data, message=i18n.t("success.payments_retrieved", lang=lang))
+
+
+@router.post(
+    "/invoices/{invoice_id}/payments",
+    response_model=GenericResponse[InvoiceResponse],
+    status_code=status.HTTP_201_CREATED,
+    dependencies=[Depends(ScopeGuard(NidusScope.INVOICE_WRITE))],
+)
+async def create_invoice_payment(
+    invoice_id: UUID,
+    data: InvoicePaymentCreate,
+    session: AsyncSession = Depends(get_current_tenant_session),
+    lang: str = Depends(get_language),
+):
+    invoice = await PaymentService.create_payment(session, invoice_id, data)
+    return GenericResponse(data=invoice, message=i18n.t("success.payment_created", lang=lang))
+
+
+@router.delete(
+    "/invoices/{invoice_id}/payments/{payment_id}",
+    response_model=GenericResponse[InvoiceResponse],
+    dependencies=[Depends(ScopeGuard(NidusScope.INVOICE_WRITE))],
+)
+async def delete_invoice_payment(
+    invoice_id: UUID,
+    payment_id: UUID,
+    session: AsyncSession = Depends(get_current_tenant_session),
+    lang: str = Depends(get_language),
+):
+    invoice = await PaymentService.delete_payment(session, invoice_id, payment_id)
+    return GenericResponse(data=invoice, message=i18n.t("success.payment_deleted", lang=lang))

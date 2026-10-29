@@ -20,6 +20,8 @@ export interface ColumnDef<TData> {
   accessorKey?: keyof TData;
   cell?: (item: TData) => React.ReactNode;
   className?: string;
+  /** Default left. Use right for money; center for short codes/units. */
+  align?: "left" | "center" | "right";
 }
 
 interface BaseDataTableProps<TData> {
@@ -29,6 +31,7 @@ interface BaseDataTableProps<TData> {
   pageSize?: number;
   emptyMessage?: string;
   paginationText?: (start: number, end: number, total: number) => string;
+  onRowClick?: (item: TData) => void;
 }
 
 interface ClientDataTableProps<TData> extends BaseDataTableProps<TData> {
@@ -70,6 +73,7 @@ export function DataTable<TData>(props: DataTableProps<TData>) {
     emptyMessage = "No results found.",
     paginationText,
     mode = "client",
+    onRowClick,
   } = props;
 
   const isServer = mode === "server";
@@ -95,8 +99,7 @@ export function DataTable<TData>(props: DataTableProps<TData>) {
     ) {
       props.onSearchChange(debouncedSearchQuery);
     }
-    // Intentionally depend on debounced value only — parent callbacks are unstable.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- parent onSearchChange identity is unstable
   }, [debouncedSearchQuery, isServer, isCursor]);
 
   const processedData = React.useMemo(() => {
@@ -194,14 +197,23 @@ export function DataTable<TData>(props: DataTableProps<TData>) {
         <Table className="flex-1 w-full">
           <TableHeader className="bg-muted/40 border-b border-border/60 sticky top-0 z-10">
             <TableRow className="hover:bg-transparent h-12">
-              {columns.map((col, index) => (
-                <TableHead
-                  key={index}
-                  className={`font-medium ${col.className || ""}`}
-                >
-                  {col.header}
-                </TableHead>
-              ))}
+              {columns.map((col, index) => {
+                const align = col.align ?? "left";
+                const alignClass =
+                  align === "right"
+                    ? "text-right"
+                    : align === "center"
+                      ? "text-center"
+                      : "text-left";
+                return (
+                  <TableHead
+                    key={index}
+                    className={`font-medium ${alignClass} ${col.className || ""}`}
+                  >
+                    {col.header}
+                  </TableHead>
+                );
+              })}
             </TableRow>
           </TableHeader>
           <TableBody className="align-top">
@@ -221,20 +233,32 @@ export function DataTable<TData>(props: DataTableProps<TData>) {
               processedData.map((item, rowIndex) => (
                 <TableRow
                   key={rowIndex}
-                  className="hover:bg-muted/40 transition-colors border-b-border/40 last:border-b h-16"
+                  className={`hover:bg-muted/40 transition-colors border-b-border/40 last:border-b h-16 ${
+                    onRowClick ? "cursor-pointer" : ""
+                  }`}
+                  onClick={onRowClick ? () => onRowClick(item) : undefined}
                 >
-                  {columns.map((col, colIndex) => (
-                    <TableCell
-                      key={colIndex}
-                      className={`py-2 ${col.className || ""}`}
-                    >
-                      {col.cell
-                        ? col.cell(item)
-                        : col.accessorKey
-                          ? String(item[col.accessorKey] ?? "")
-                          : null}
-                    </TableCell>
-                  ))}
+                  {columns.map((col, colIndex) => {
+                    const align = col.align ?? "left";
+                    const alignClass =
+                      align === "right"
+                        ? "text-right tabular-nums"
+                        : align === "center"
+                          ? "text-center"
+                          : "text-left";
+                    return (
+                      <TableCell
+                        key={colIndex}
+                        className={`${alignClass} ${col.className || ""}`}
+                      >
+                        {col.cell
+                          ? col.cell(item)
+                          : col.accessorKey
+                            ? String(item[col.accessorKey] ?? "")
+                            : null}
+                      </TableCell>
+                    );
+                  })}
                 </TableRow>
               ))
             )}

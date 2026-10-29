@@ -15,6 +15,8 @@ export enum NidusScope {
   SUPPLIER_WRITE = "billing:supplier:write",
   ITEM_READ = "billing:item:read",
   ITEM_WRITE = "billing:item:write",
+  INVOICE_READ = "billing:invoice:read",
+  INVOICE_WRITE = "billing:invoice:write",
 }
 
 /** Assignable scopes mirrored from backend NidusScope (excluding SUPERADMIN). */

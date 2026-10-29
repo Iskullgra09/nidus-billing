@@ -47,12 +47,29 @@
         "item_retrieved": "Ítem del catálogo obtenido exitosamente.",
         "item_created": "Ítem del catálogo creado exitosamente.",
         "item_updated": "Ítem del catálogo actualizado exitosamente.",
-        "item_deleted": "Ítem del catálogo eliminado exitosamente."
+        "item_deleted": "Ítem del catálogo eliminado exitosamente.",
+        "invoices_retrieved": "Facturas obtenidas exitosamente.",
+        "invoice_retrieved": "Factura obtenida exitosamente.",
+        "invoice_created": "Factura creada exitosamente.",
+        "invoice_updated": "Factura actualizada exitosamente.",
+        "invoice_deleted": "Factura eliminada exitosamente.",
+        "invoice_issued": "Factura emitida exitosamente.",
+        "invoice_voided": "Factura anulada exitosamente.",
+        "payments_retrieved": "Pagos obtenidos exitosamente.",
+        "payment_created": "Pago registrado exitosamente.",
+        "payment_deleted": "Pago eliminado exitosamente."
     },
     "billing": {
         "customer_tax_id_conflict": "Ya existe un cliente con el tax id '{tax_id}' en esta organización.",
         "supplier_tax_id_conflict": "Ya existe un proveedor con el tax id '{tax_id}' en esta organización.",
-        "item_sku_conflict": "Ya existe un ítem con el SKU '{sku}' en esta organización."
+        "item_sku_conflict": "Ya existe un ítem con el SKU '{sku}' en esta organización.",
+        "invoice_not_draft": "Solo las facturas en borrador se pueden modificar o eliminar.",
+        "invoice_not_issued": "Solo facturas emitidas o parciales se pueden anular.",
+        "invoice_no_lines": "Agrega al menos una línea antes de emitir la factura.",
+        "invoice_due_date_required": "La fecha de vencimiento es obligatoria al emitir una factura a crédito.",
+        "invoice_has_payments": "No se puede anular mientras la factura tenga pagos registrados.",
+        "invoice_not_payable": "Solo se pueden registrar pagos en facturas emitidas abiertas.",
+        "payment_exceeds_balance": "El monto del pago excede el saldo pendiente ({balance})."
     },
     "media": {
         "invalid_type": "El avatar debe ser una imagen JPEG, PNG o WebP.",

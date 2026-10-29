@@ -1,6 +1,7 @@
 import {
   Building2,
   Contact,
+  FileText,
   LayoutDashboard,
   Package,
   ScrollText,
@@ -48,6 +49,13 @@ export const SHELL_NAV_GROUPS: ShellNavGroup[] = [
         icon: Package,
         scope: NidusScope.ITEM_READ,
         keywords: "items catalogo products services productos",
+      },
+      {
+        id: "invoices",
+        href: "/billing/invoices",
+        icon: FileText,
+        scope: NidusScope.INVOICE_READ,
+        keywords: "invoices facturas billing contado credito pdf",
       },
     ],
   },

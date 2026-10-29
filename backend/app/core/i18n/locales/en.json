@@ -47,12 +47,29 @@
         "item_retrieved": "Catalog item retrieved successfully.",
         "item_created": "Catalog item created successfully.",
         "item_updated": "Catalog item updated successfully.",
-        "item_deleted": "Catalog item deleted successfully."
+        "item_deleted": "Catalog item deleted successfully.",
+        "invoices_retrieved": "Invoices retrieved successfully.",
+        "invoice_retrieved": "Invoice retrieved successfully.",
+        "invoice_created": "Invoice created successfully.",
+        "invoice_updated": "Invoice updated successfully.",
+        "invoice_deleted": "Invoice deleted successfully.",
+        "invoice_issued": "Invoice issued successfully.",
+        "invoice_voided": "Invoice voided successfully.",
+        "payments_retrieved": "Payments retrieved successfully.",
+        "payment_created": "Payment recorded successfully.",
+        "payment_deleted": "Payment removed successfully."
     },
     "billing": {
         "customer_tax_id_conflict": "A customer with tax id '{tax_id}' already exists in this organization.",
         "supplier_tax_id_conflict": "A supplier with tax id '{tax_id}' already exists in this organization.",
-        "item_sku_conflict": "An item with SKU '{sku}' already exists in this organization."
+        "item_sku_conflict": "An item with SKU '{sku}' already exists in this organization.",
+        "invoice_not_draft": "Only draft invoices can be modified or deleted.",
+        "invoice_not_issued": "Only issued or partially paid invoices can be voided.",
+        "invoice_no_lines": "Add at least one line before issuing the invoice.",
+        "invoice_due_date_required": "A due date is required when issuing a credit (crédito) invoice.",
+        "invoice_has_payments": "Void is blocked while the invoice has recorded payments.",
+        "invoice_not_payable": "Payments can only be recorded on open issued invoices.",
+        "payment_exceeds_balance": "Payment amount exceeds the open balance ({balance})."
     },
     "media": {
         "invalid_type": "Avatar must be a JPEG, PNG, or WebP image.",

@@ -16,3 +16,12 @@ class ItemFilter(BaseModel):
     is_service: Optional[bool] = None
 
     model_config = ConfigDict(populate_by_name=True)
+
+
+class InvoiceFilter(BaseModel):
+    q: Optional[str] = Field(default=None, description="Search reference or customer name")
+    status: Optional[str] = None
+    payment_condition: Optional[str] = None
+    customer_id: Optional[str] = None
+
+    model_config = ConfigDict(populate_by_name=True)

@@ -1,7 +1,11 @@
+from datetime import date, datetime
 from decimal import Decimal
 from typing import Optional
+from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field
+
+from app.models.billing.enums import PaymentCondition, PaymentMethod
 
 
 class PartyCreate(BaseModel):
@@ -44,3 +48,42 @@ class ItemUpdate(BaseModel):
     is_active: Optional[bool] = None
 
     model_config = ConfigDict(extra="forbid")
+
+
+class InvoiceLineInput(BaseModel):
+    item_id: Optional[UUID] = None
+    description: str = Field(min_length=1, max_length=255)
+    sku: Optional[str] = Field(default=None, max_length=64)
+    unit: str = Field(default="unit", min_length=1, max_length=32)
+    quantity: Decimal = Field(default=Decimal("1"), gt=0)
+    unit_price: Decimal = Field(default=Decimal("0"), ge=0)
+    tax_rate: Optional[Decimal] = Field(default=None, ge=0, le=100)
+
+
+class InvoiceCreate(BaseModel):
+    customer_id: UUID
+    payment_condition: PaymentCondition = PaymentCondition.CONTADO
+    due_date: Optional[date] = None
+    notes: Optional[str] = Field(default=None, max_length=2000)
+    reference_number: Optional[str] = Field(default=None, max_length=64)
+    currency: str = Field(default="CRC", min_length=3, max_length=3)
+    lines: list[InvoiceLineInput] = Field(min_length=1)
+
+
+class InvoiceUpdate(BaseModel):
+    customer_id: Optional[UUID] = None
+    payment_condition: Optional[PaymentCondition] = None
+    due_date: Optional[date] = None
+    notes: Optional[str] = Field(default=None, max_length=2000)
+    reference_number: Optional[str] = Field(default=None, max_length=64)
+    currency: Optional[str] = Field(default=None, min_length=3, max_length=3)
+    lines: Optional[list[InvoiceLineInput]] = Field(default=None, min_length=1)
+
+    model_config = ConfigDict(extra="forbid")
+
+
+class InvoicePaymentCreate(BaseModel):
+    amount: Decimal = Field(gt=0)
+    paid_at: Optional[datetime] = None
+    method: PaymentMethod = PaymentMethod.CASH
+    notes: Optional[str] = Field(default=None, max_length=2000)

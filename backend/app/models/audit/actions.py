@@ -35,6 +35,14 @@ class AuditAction(StrEnum):
     ITEM_UPDATE = "item.update"
     ITEM_DELETE = "item.delete"
 
+    INVOICE_CREATE = "invoice.create"
+    INVOICE_UPDATE = "invoice.update"
+    INVOICE_DELETE = "invoice.delete"
+    INVOICE_ISSUE = "invoice.issue"
+    INVOICE_VOID = "invoice.void"
+    INVOICE_PAYMENT_CREATE = "invoice_payment.create"
+    INVOICE_PAYMENT_DELETE = "invoice_payment.delete"
+
 
 class AuditResourceType(StrEnum):
     ORGANIZATION = "organization"
@@ -46,3 +54,5 @@ class AuditResourceType(StrEnum):
     CUSTOMER = "customer"
     SUPPLIER = "supplier"
     ITEM = "item"
+    INVOICE = "invoice"
+    INVOICE_PAYMENT = "invoice_payment"
