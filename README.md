@@ -48,7 +48,7 @@ Phases are **product slices**, not Core’s old Phase 1–16 list. Status update
 | **B1** | Parties & catalog | Done |
 | **B2** | Operational docs (contado/crédito) + PDF | Done |
 | **B3** | Numbering, payments & balances | Done |
-| **B4** | Outbound email (send invoice) | Planned |
+| **B4** | Outbound email (send invoice) | Done |
 | **B5** | Org fiscal profile & Hacienda credentials | Planned |
 | **B6** | Hacienda outbound (emit + verify) | Planned |
 | **B7** | Hacienda inbound (receive / accept-reject) | Planned |
@@ -89,9 +89,9 @@ Operational billing (B1–B4) can ship value before fiscal/Hacienda. Email send 
 
 ### B4 — Outbound email (send invoice)
 
-**Backend:** send issued invoice by email (PDF; later XML/clave when fiscal exists); delivery log per document; reuse Core SMTP settings.  
-**Frontend:** “Send email” action, resend, delivery status.  
-**Out of scope:** inbound mailbox (B8).
+**Backend:** `POST /invoices/{id}/send-email` attaches PDF; `invoice_email_delivery` log (`sent` / `failed` / `mocked` when SMTP unset); reuses SMTP settings; audit `invoice_email.send`.  
+**Frontend:** Send email on issued/partial/paid; delivery history on invoice detail; optional override recipient.  
+**Out of scope:** inbound mailbox (B8); XML/clave (B6).
 
 ### B5 — Org fiscal profile & Hacienda credentials
 

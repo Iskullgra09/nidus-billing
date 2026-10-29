@@ -39,6 +39,12 @@ services:
       PUBLIC_API_URL: ${PUBLIC_API_URL:-http://localhost:8000}
       MEDIA_ROOT: /app/media
       SEED_DEMO: ${SEED_DEMO:-false}
+      SMTP_HOST: ${SMTP_HOST:-sandbox.smtp.mailtrap.io}
+      SMTP_PORT: ${SMTP_PORT:-2525}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      EMAIL_FROM_NAME: ${EMAIL_FROM_NAME:-Nidus Billing}
+      EMAIL_FROM_ADDRESS: ${EMAIL_FROM_ADDRESS:-noreply@nidus.local}
     volumes:
       - media_data:/app/media
     depends_on:

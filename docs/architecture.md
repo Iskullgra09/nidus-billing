@@ -1246,3 +1246,24 @@ Nidus Billing will eventually offer adjacent products (purchases/OC, inventory, 
 ### Consequences
 * **Positive:** Stable sales schema; clear product packaging later; product ideas park in README without schema churn.
 * **Negative:** Some CR shops wanting OC/AP or rich tax matrices early must wait or use external tools until those slices land.
+
+---
+
+## ADR B-006: Outbound Invoice Email (Phase B4)
+
+**Date:** 2026-10-29
+**Status:** Accepted
+
+### Context
+Issued invoices need a first outbound channel before Hacienda. SMTP and mock-dispatch already exist for invitations/password reset.
+
+### Decision
+1. **Send only non-draft, non-void** invoices (`issued` / `partial` / `paid`) with PDF attachment.
+2. **Recipient:** request `to_email` override, else customer.email (required one of the two).
+3. **Delivery log** table `invoice_email_delivery` (RLS): status `sent` | `failed` | `mocked` (no SMTP credentials → mock print, still logged).
+4. **Reuse** `EmailService` + org SMTP settings; do not store PDF blobs in the log.
+5. **Later:** B6 may attach XML/clave to the same send path; B8 remains inbound-only.
+
+### Consequences
+* **Positive:** Auditable resend history; local dev works without SMTP.
+* **Negative:** Mocked sends are not real delivery — operators must configure SMTP for production.

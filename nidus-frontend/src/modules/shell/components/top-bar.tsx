@@ -25,7 +25,7 @@ export function TopBar({ user, organizations }: TopBarProps) {
   const { toggleMobileOpen } = useSidebar();
 
   return (
-    <header className="sticky top-0 z-40 border-b border-border/40 bg-background/80 backdrop-blur-xl supports-backdrop-filter:bg-background/70">
+    <header className="sticky top-0 z-40 border-b border-border/70 bg-card/90 shadow-sm backdrop-blur-xl supports-backdrop-filter:bg-card/80">
       <div className="flex h-14 items-center gap-3 px-4 sm:px-6">
         <div className="flex min-w-0 items-center gap-2">
           <Button

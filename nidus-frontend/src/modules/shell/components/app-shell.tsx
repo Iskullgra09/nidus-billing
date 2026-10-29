@@ -21,8 +21,8 @@ export function AppShell({ user, organizations, children }: AppShellProps) {
         <TopBar user={user} organizations={organizations} />
         <div className="flex min-h-0 flex-1">
           <AppSidebar />
-          <main className="min-w-0 flex-1 p-6 lg:p-8">
-            <div className="mx-auto max-w-6xl">{children}</div>
+          <main className="min-w-0 flex-1 bg-background p-6 lg:p-8">
+            <div className="mx-auto max-w-6xl space-y-6">{children}</div>
           </main>
         </div>
       </div>

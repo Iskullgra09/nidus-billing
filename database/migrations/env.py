@@ -24,6 +24,7 @@ from app.models.audit.audit_log import AuditLog  # type: ignore
 from app.models.billing.customer import Customer  # type: ignore
 from app.models.billing.document_series import DocumentSeries  # type: ignore
 from app.models.billing.invoice import Invoice, InvoiceLine  # type: ignore
+from app.models.billing.invoice_email import InvoiceEmailDelivery  # type: ignore
 from app.models.billing.item import Item  # type: ignore
 from app.models.billing.payment import InvoicePayment  # type: ignore
 from app.models.billing.supplier import Supplier  # type: ignore

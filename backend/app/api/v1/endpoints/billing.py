@@ -12,6 +12,7 @@ from app.schemas.filters.billing import InvoiceFilter, ItemFilter, PartyFilter
 from app.schemas.requests.billing import (
     InvoiceCreate,
     InvoicePaymentCreate,
+    InvoiceSendEmail,
     InvoiceUpdate,
     ItemCreate,
     ItemUpdate,
@@ -21,6 +22,7 @@ from app.schemas.requests.billing import (
 from app.schemas.requests.pagination import CursorParams
 from app.schemas.responses.base import GenericResponse
 from app.schemas.responses.billing import (
+    InvoiceEmailDeliveryResponse,
     InvoiceListItem,
     InvoicePaymentResponse,
     InvoiceResponse,
@@ -30,6 +32,7 @@ from app.schemas.responses.billing import (
 from app.schemas.responses.pagination import CursorPage
 from app.services.billing import (
     CustomerService,
+    InvoiceEmailService,
     InvoiceService,
     ItemService,
     PaymentService,
@@ -433,3 +436,42 @@ async def delete_invoice_payment(
 ):
     invoice = await PaymentService.delete_payment(session, invoice_id, payment_id)
     return GenericResponse(data=invoice, message=i18n.t("success.payment_deleted", lang=lang))
+
+
+@router.get(
+    "/invoices/{invoice_id}/emails",
+    response_model=GenericResponse[list[InvoiceEmailDeliveryResponse]],
+    dependencies=[Depends(ScopeGuard(NidusScope.INVOICE_READ))],
+)
+async def list_invoice_emails(
+    invoice_id: UUID,
+    session: AsyncSession = Depends(get_current_tenant_session),
+    lang: str = Depends(get_language),
+):
+    data = await InvoiceEmailService.list_deliveries(session, invoice_id)
+    return GenericResponse(data=data, message=i18n.t("success.invoice_emails_retrieved", lang=lang))
+
+
+@router.post(
+    "/invoices/{invoice_id}/send-email",
+    response_model=GenericResponse[InvoiceEmailDeliveryResponse],
+    status_code=status.HTTP_201_CREATED,
+    dependencies=[Depends(ScopeGuard(NidusScope.INVOICE_WRITE))],
+)
+async def send_invoice_email(
+    invoice_id: UUID,
+    data: InvoiceSendEmail,
+    session: AsyncSession = Depends(get_current_tenant_session),
+    payload: dict[str, Any] = Depends(get_jwt_payload),
+    lang: str = Depends(get_language),
+):
+    actor_raw = payload.get("sub")
+    actor_user_id = UUID(str(actor_raw)) if actor_raw else None
+    delivery = await InvoiceEmailService.send_invoice_email(
+        session,
+        invoice_id,
+        data,
+        actor_user_id=actor_user_id,
+        lang=lang,
+    )
+    return GenericResponse(data=delivery, message=i18n.t("success.invoice_email_sent", lang=lang))

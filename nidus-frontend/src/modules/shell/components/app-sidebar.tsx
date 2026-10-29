@@ -160,7 +160,7 @@ export function AppSidebar() {
     <>
       <aside
         className={cn(
-          "sticky top-14 hidden h-[calc(100vh-3.5rem)] shrink-0 border-r border-border/40 bg-background/80 backdrop-blur-xl md:block",
+          "sticky top-14 hidden h-[calc(100vh-3.5rem)] shrink-0 border-r border-border/70 bg-sidebar/95 shadow-[1px_0_0_0_rgba(0,0,0,0.02)] backdrop-blur-xl md:block",
           "transition-[width] duration-200 ease-out",
           collapsed ? "w-16" : "w-60",
         )}
@@ -176,7 +176,7 @@ export function AppSidebar() {
             aria-label={t("close")}
             onClick={() => setMobileOpen(false)}
           />
-          <aside className="absolute inset-y-0 left-0 flex w-72 max-w-[85vw] flex-col border-r border-border/40 bg-background shadow-xl">
+          <aside className="absolute inset-y-0 left-0 flex w-72 max-w-[85vw] flex-col border-r border-border/70 bg-sidebar shadow-xl">
             <SidebarNav compact={false} />
           </aside>
         </div>

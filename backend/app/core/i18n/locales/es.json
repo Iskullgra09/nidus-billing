@@ -57,7 +57,9 @@
         "invoice_voided": "Factura anulada exitosamente.",
         "payments_retrieved": "Pagos obtenidos exitosamente.",
         "payment_created": "Pago registrado exitosamente.",
-        "payment_deleted": "Pago eliminado exitosamente."
+        "payment_deleted": "Pago eliminado exitosamente.",
+        "invoice_emails_retrieved": "Historial de envíos obtenido exitosamente.",
+        "invoice_email_sent": "Correo de factura enviado exitosamente."
     },
     "billing": {
         "customer_tax_id_conflict": "Ya existe un cliente con el tax id '{tax_id}' en esta organización.",
@@ -69,7 +71,10 @@
         "invoice_due_date_required": "La fecha de vencimiento es obligatoria al emitir una factura a crédito.",
         "invoice_has_payments": "No se puede anular mientras la factura tenga pagos registrados.",
         "invoice_not_payable": "Solo se pueden registrar pagos en facturas emitidas abiertas.",
-        "payment_exceeds_balance": "El monto del pago excede el saldo pendiente ({balance})."
+        "payment_exceeds_balance": "El monto del pago excede el saldo pendiente ({balance}).",
+        "invoice_not_emailable": "No se pueden enviar por correo facturas en borrador o anuladas.",
+        "invoice_email_required": "El cliente no tiene correo. Indica una dirección de destino.",
+        "invoice_email_failed": "No se pudo enviar el correo de la factura ({error})."
     },
     "media": {
         "invalid_type": "El avatar debe ser una imagen JPEG, PNG o WebP.",
@@ -108,7 +113,14 @@
         "invitation_subject": "Has sido invitado a un espacio de Nidus",
         "invitation_body": "Te han invitado a colaborar en Nidus. Haz clic en este enlace para aceptar la invitación: {link}",
         "password_reset_subject": "Restablece tu contraseña de Nidus",
-        "password_reset_body": "Recibimos una solicitud para restablecer tu contraseña. Haz clic en este enlace para elegir una nueva: {link}"
+        "password_reset_body": "Recibimos una solicitud para restablecer tu contraseña. Haz clic en este enlace para elegir una nueva: {link}",
+        "invoice_subject": "Factura {document_number}",
+        "invoice_body": "Hola {customer_name},\n\nAdjuntamos la factura {document_number} por {total}.\n\nEl PDF va adjunto a este correo.",
+        "invoice_greeting": "Hola {customer_name},",
+        "invoice_intro": "Te enviamos la factura <strong>{document_number}</strong>. Adjuntamos una copia en PDF para tus registros.",
+        "invoice_amount_label": "Monto",
+        "invoice_attachment_note": "El PDF de la factura está adjunto a este mensaje.",
+        "invoice_footer": "Este mensaje fue enviado por Nidus Billing. Si no esperabas esta factura, contacta al remitente."
     },
     "organization": {
         "slug_already_exists": "La URL del espacio de trabajo (slug) ya está en uso."

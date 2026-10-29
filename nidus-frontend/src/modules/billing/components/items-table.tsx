@@ -15,6 +15,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/shared/ui/dropdown-menu";
+import { ConfirmDialog } from "@/shared/components/layout/confirm-dialog";
 import { DataTable, ColumnDef } from "@/shared/components/layout/data-table";
 import { CanAccess } from "@/modules/access/components/can-access";
 import { NidusScope } from "@/shared/access/scopes";
@@ -49,6 +50,7 @@ export function ItemsTable({
   const [dialogOpen, setDialogOpen] = React.useState(false);
   const [detailOpen, setDetailOpen] = React.useState(false);
   const [selected, setSelected] = React.useState<CatalogItem | null>(null);
+  const [deleteTarget, setDeleteTarget] = React.useState<CatalogItem | null>(null);
 
   const replaceQuery = (mutate: (params: URLSearchParams) => void) => {
     const params = new URLSearchParams(searchParams.toString());
@@ -73,11 +75,12 @@ export function ItemsTable({
     setDialogOpen(true);
   };
 
-  const handleDelete = async (item: CatalogItem) => {
-    if (!confirm(t("deleteConfirm", { name: item.name }))) return;
-    const result = await deleteItemAction(item.id);
+  const handleDelete = async () => {
+    if (!deleteTarget) return;
+    const result = await deleteItemAction(deleteTarget.id);
     if (result.status === "success") toast.success(result.message);
     else toast.error(result.message);
+    setDeleteTarget(null);
   };
 
   const columns: ColumnDef<CatalogItem>[] = [
@@ -146,7 +149,7 @@ export function ItemsTable({
                 </DropdownMenuItem>
                 <DropdownMenuItem
                   className="text-destructive focus:text-destructive"
-                  onClick={() => void handleDelete(item)}
+                  onClick={() => setDeleteTarget(item)}
                 >
                   <Trash2 className="size-4" />
                   {t("deleteAction")}
@@ -216,6 +219,18 @@ export function ItemsTable({
         item={selected}
         onCreate={createItemAction}
         onUpdate={updateItemAction}
+      />
+
+      <ConfirmDialog
+        open={deleteTarget !== null}
+        onOpenChange={(open) => {
+          if (!open) setDeleteTarget(null);
+        }}
+        title={t("deleteDialogTitle")}
+        description={t("deleteConfirm", { name: deleteTarget?.name ?? "" })}
+        confirmLabel={t("deleteAction")}
+        variant="destructive"
+        onConfirm={handleDelete}
       />
     </div>
   );

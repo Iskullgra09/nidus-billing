@@ -87,3 +87,9 @@ class InvoicePaymentCreate(BaseModel):
     paid_at: Optional[datetime] = None
     method: PaymentMethod = PaymentMethod.CASH
     notes: Optional[str] = Field(default=None, max_length=2000)
+
+
+class InvoiceSendEmail(BaseModel):
+    to_email: Optional[EmailStr] = None
+    subject: Optional[str] = Field(default=None, max_length=255)
+    message: Optional[str] = Field(default=None, max_length=2000)

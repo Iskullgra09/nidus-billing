@@ -8,9 +8,11 @@ import { ActionResponse } from "@/core/types/api";
 import {
   CursorPage,
   Invoice,
+  InvoiceEmailDelivery,
   InvoiceListItem,
   InvoicePayload,
   InvoicePaymentPayload,
+  InvoiceSendEmailPayload,
 } from "../types/invoice";
 
 const PATH = "/billing/invoices";
@@ -239,6 +241,57 @@ export async function downloadInvoicePdfAction(
     };
   } catch (error) {
     console.error("Download invoice PDF error:", error);
+    return { status: "error", message: tCommon("connectionError") };
+  }
+}
+
+export async function getInvoiceEmailsAction(
+  invoiceId: string,
+): Promise<InvoiceEmailDelivery[]> {
+  try {
+    const session = (await cookies()).get("nidus_session")?.value;
+    if (!session) return [];
+    const response = await fetchClient<InvoiceEmailDelivery[]>(
+      `/billing/invoices/${invoiceId}/emails`,
+      { headers: { Authorization: `Bearer ${session}` } },
+    );
+    return response.status === "success" && response.data ? response.data : [];
+  } catch (error) {
+    console.error("Fetch invoice emails error:", error);
+    return [];
+  }
+}
+
+export async function sendInvoiceEmailAction(
+  invoiceId: string,
+  payload: InvoiceSendEmailPayload = {},
+): Promise<ActionResponse> {
+  const tCommon = await getTranslations("Common");
+  try {
+    const session = (await cookies()).get("nidus_session")?.value;
+    if (!session) return { status: "error", message: tCommon("connectionError") };
+
+    const body: Record<string, string> = {};
+    if (payload.to_email?.trim()) body.to_email = payload.to_email.trim();
+    if (payload.subject?.trim()) body.subject = payload.subject.trim();
+    if (payload.message?.trim()) body.message = payload.message.trim();
+
+    const response = await fetchClient<InvoiceEmailDelivery>(
+      `/billing/invoices/${invoiceId}/send-email`,
+      {
+        method: "POST",
+        headers: { Authorization: `Bearer ${session}` },
+        body: JSON.stringify(body),
+      },
+    );
+
+    if (response.status === "success") {
+      revalidatePath(PATH);
+      return { status: "success", message: response.message || tCommon("success") };
+    }
+    return { status: "error", message: response.message || tCommon("unknownError") };
+  } catch (error) {
+    console.error("Send invoice email error:", error);
     return { status: "error", message: tCommon("connectionError") };
   }
 }
