@@ -41,6 +41,7 @@ class ItemCreate(BaseModel):
     unit: str = Field(default="unit", min_length=1, max_length=32)
     unit_price: Decimal = Field(default=Decimal("0"), ge=0)
     tax_rate: Optional[Decimal] = Field(default=None, ge=0, le=100)
+    cabys_code: Optional[str] = Field(default=None, max_length=16)
     is_service: bool = False
     is_active: bool = True
 
@@ -52,6 +53,7 @@ class ItemUpdate(BaseModel):
     unit: Optional[str] = Field(default=None, min_length=1, max_length=32)
     unit_price: Optional[Decimal] = Field(default=None, ge=0)
     tax_rate: Optional[Decimal] = Field(default=None, ge=0, le=100)
+    cabys_code: Optional[str] = Field(default=None, max_length=16)
     is_service: Optional[bool] = None
     is_active: Optional[bool] = None
 
@@ -77,6 +79,8 @@ class InvoiceCreate(BaseModel):
     notes: Optional[str] = Field(default=None, max_length=2000)
     reference_number: Optional[str] = Field(default=None, max_length=64)
     currency: InvoiceCurrency = InvoiceCurrency.CRC
+    exchange_rate: Optional[Decimal] = Field(default=None, gt=0)
+    exchange_rate_date: Optional[date] = None
     lines: list[InvoiceLineInput] = Field(min_length=1)
 
 
@@ -87,6 +91,8 @@ class InvoiceUpdate(BaseModel):
     notes: Optional[str] = Field(default=None, max_length=2000)
     reference_number: Optional[str] = Field(default=None, max_length=64)
     currency: Optional[InvoiceCurrency] = None
+    exchange_rate: Optional[Decimal] = Field(default=None, gt=0)
+    exchange_rate_date: Optional[date] = None
     lines: Optional[list[InvoiceLineInput]] = Field(default=None, min_length=1)
 
     model_config = ConfigDict(extra="forbid")

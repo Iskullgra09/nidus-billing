@@ -7,6 +7,7 @@ export interface CatalogItem {
   unit: string;
   unit_price: string;
   tax_rate: string | null;
+  cabys_code: string | null;
   is_service: boolean;
   is_active: boolean;
   created_at: string;
@@ -20,6 +21,7 @@ export interface ItemPayload {
   unit?: string;
   unit_price?: string | number;
   tax_rate?: string | number | null;
+  cabys_code?: string | null;
   is_service?: boolean;
   is_active?: boolean;
 }

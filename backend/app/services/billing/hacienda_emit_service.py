@@ -205,8 +205,23 @@ class HaciendaEmitService:
             consecutive=consecutive,
         )
 
+        if invoice.currency == "USD" and (
+            invoice.exchange_rate is None or Decimal(invoice.exchange_rate) <= 0
+        ):
+            raise NidusException(
+                code="EXCHANGE_RATE_REQUIRED",
+                message_key="billing.exchange_rate_required",
+                status_code=400,
+            )
+
         xml_lines: list[XmlLine] = []
         for line in lines:
+            if not line.cabys_code:
+                raise NidusException(
+                    code="CABYS_REQUIRED",
+                    message_key="billing.cabys_required",
+                    status_code=400,
+                )
             rate = Decimal(line.tax_rate) if line.tax_rate is not None else None
             code = line.tax_code or tax_rate_to_mh_code(
                 float(rate) if rate is not None else None
@@ -228,11 +243,17 @@ class HaciendaEmitService:
                 )
             )
 
+        exchange_rate = (
+            Decimal(invoice.exchange_rate)
+            if invoice.currency == "USD" and invoice.exchange_rate is not None
+            else Decimal("1")
+        )
         xml_input = FacturaElectronicaInput(
             clave=clave,
             consecutive=consecutive,
             issued_at=issued_at,
             currency=invoice.currency,
+            exchange_rate=exchange_rate,
             emitter=XmlParty(
                 identification_type_code=HaciendaEmitService._id_type_code(
                     profile.identification_type
@@ -276,20 +297,41 @@ class HaciendaEmitService:
         if credential and credential.pin_ciphertext:
             api_password = decrypt_text(credential.pin_ciphertext)
 
+        live = bool(settings.HACIENDA_LIVE)
+        if live and (not p12_bytes or p12_password is None):
+            raise NidusException(
+                code="HACIENDA_P12_REQUIRED",
+                message_key="billing.hacienda_p12_required",
+                status_code=400,
+            )
+
         try:
             sign_result = sign_factura_xml(
                 xml_unsigned,
                 p12_bytes=p12_bytes,
                 p12_password=p12_password,
             )
-        except NotImplementedError:
+        except Exception as exc:
+            if live:
+                raise NidusException(
+                    code="HACIENDA_SIGN_FAILED",
+                    message_key="billing.hacienda_sign_failed",
+                    status_code=400,
+                    error=str(exc)[:300],
+                ) from exc
             sign_result = sign_factura_xml(
                 xml_unsigned,
                 p12_bytes=None,
                 p12_password=None,
             )
 
-        live = bool(settings.HACIENDA_LIVE) and not sign_result.mock
+        if live and sign_result.mock:
+            raise NidusException(
+                code="HACIENDA_SIGN_REQUIRED",
+                message_key="billing.hacienda_sign_required",
+                status_code=400,
+            )
+
         client = HaciendaClient(
             environment=HaciendaEnvironment(
                 credential.environment
@@ -306,7 +348,9 @@ class HaciendaEmitService:
                 if credential and credential.oauth_client_secret_ciphertext
                 else ""
             ),
-            live=live and bool(credential and credential.username and api_password),
+            live=live
+            and not sign_result.mock
+            and bool(credential and credential.username and api_password),
         )
 
         submit = await client.submit(

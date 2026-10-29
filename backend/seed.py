@@ -23,7 +23,14 @@ from app.core.rls import clear_rls_context
 from app.core.security import hash_password
 from app.models import Member, Organization, User
 from app.models.billing.customer import Customer
-from app.models.billing.enums import InvoiceStatus, PaymentCondition, PaymentMethod
+from app.models.billing.enums import (
+    IdentificationType,
+    InvoiceStatus,
+    PaymentCondition,
+    PaymentMethod,
+    tax_rate_to_mh_code,
+)
+from app.models.billing.fiscal_profile import OrganizationFiscalProfile
 from app.models.billing.invoice import Invoice, InvoiceLine
 from app.models.billing.item import Item
 from app.models.billing.payment import InvoicePayment
@@ -100,20 +107,39 @@ ACME_CUSTOMERS: List[Dict[str, Any]] = [
         "name": "Ferretería Central",
         "email": "compras@ferreteria.example",
         "phone": "+50622223333",
-        "tax_id": "SEED-C-001",
+        "tax_id": "3101987001",
+        "identification_type": IdentificationType.JURIDICA.value,
     },
     {
         "name": "Café Aurora",
         "email": "admin@cafeaurora.example",
         "phone": "+50688881111",
-        "tax_id": "SEED-C-002",
+        "tax_id": "3101987002",
+        "identification_type": IdentificationType.JURIDICA.value,
     },
     {
         "name": "Clínica Norte",
         "email": "facturacion@clinicanorte.example",
-        "tax_id": "SEED-C-003",
+        "tax_id": "3101987003",
+        "identification_type": IdentificationType.JURIDICA.value,
     },
 ]
+
+ACME_FISCAL_PROFILE: Dict[str, Any] = {
+    "legal_name": "Acme Costa Rica SA",
+    "trade_name": "Acme Corp",
+    "identification_type": IdentificationType.JURIDICA.value,
+    "identification_number": "3101123456",
+    "economic_activity_code": "620100",
+    "branch_code": "001",
+    "province": "1",
+    "canton": "01",
+    "district": "01",
+    "other_signs": "Demo fiscal profile for mock Hacienda emit",
+    "phone": "22223344",
+    "email": "fiscal@acme.dev",
+    "country_code": "CR",
+}
 
 ACME_SUPPLIERS: List[Dict[str, Any]] = [
     {
@@ -135,6 +161,7 @@ ACME_ITEMS: List[Dict[str, Any]] = [
         "unit": "hour",
         "unit_price": Decimal("75000.0000"),
         "tax_rate": Decimal("13"),
+        "cabys_code": "83119900",
         "is_service": True,
     },
     {
@@ -143,6 +170,7 @@ ACME_ITEMS: List[Dict[str, Any]] = [
         "unit": "month",
         "unit_price": Decimal("250000.0000"),
         "tax_rate": Decimal("13"),
+        "cabys_code": "83119900",
         "is_service": True,
     },
     {
@@ -151,6 +179,7 @@ ACME_ITEMS: List[Dict[str, Any]] = [
         "unit": "unit",
         "unit_price": Decimal("45000.0000"),
         "tax_rate": Decimal("13"),
+        "cabys_code": "84714900",
         "is_service": False,
     },
     {
@@ -159,7 +188,17 @@ ACME_ITEMS: List[Dict[str, Any]] = [
         "unit": "unit",
         "unit_price": Decimal("8500.0000"),
         "tax_rate": Decimal("13"),
+        "cabys_code": "85444200",
         "is_service": False,
+    },
+    {
+        "sku": "SRV-USD-HOUR",
+        "name": "USD consulting hour",
+        "unit": "hour",
+        "unit_price": Decimal("85.0000"),
+        "tax_rate": Decimal("13"),
+        "cabys_code": "83119900",
+        "is_service": True,
     },
 ]
 
@@ -170,6 +209,7 @@ NIDUS_ITEMS: List[Dict[str, Any]] = [
         "unit": "hour",
         "unit_price": Decimal("90000.0000"),
         "tax_rate": Decimal("13"),
+        "cabys_code": "83119900",
         "is_service": True,
     },
 ]
@@ -348,10 +388,22 @@ async def _get_or_create_customer(session: AsyncSession, org_id: UUID, data: Dic
             )
         )
     ).scalar_one_or_none()
+    if existing is None and data.get("email"):
+        existing = (
+            await session.execute(
+                select(Customer).where(
+                    CustomerModel.organization_id == org_id,
+                    CustomerModel.email == data["email"],
+                    CustomerModel.deleted_at.is_(None),
+                )
+            )
+        ).scalar_one_or_none()
     if existing:
         existing.name = data["name"]
         existing.email = data.get("email")
         existing.phone = data.get("phone")
+        existing.tax_id = data["tax_id"]
+        existing.identification_type = data.get("identification_type")
         existing.is_active = True
         return existing
 
@@ -361,6 +413,7 @@ async def _get_or_create_customer(session: AsyncSession, org_id: UUID, data: Dic
         email=data.get("email"),
         phone=data.get("phone"),
         tax_id=data["tax_id"],
+        identification_type=data.get("identification_type"),
         is_active=True,
     )
     session.add(customer)
@@ -413,6 +466,7 @@ async def _get_or_create_item(session: AsyncSession, org_id: UUID, data: Dict[st
         existing.unit = data["unit"]
         existing.unit_price = data["unit_price"]
         existing.tax_rate = data.get("tax_rate")
+        existing.cabys_code = data.get("cabys_code")
         existing.is_service = data.get("is_service", False)
         existing.is_active = True
         return existing
@@ -424,12 +478,35 @@ async def _get_or_create_item(session: AsyncSession, org_id: UUID, data: Dict[st
         unit=data["unit"],
         unit_price=data["unit_price"],
         tax_rate=data.get("tax_rate"),
+        cabys_code=data.get("cabys_code"),
         is_service=data.get("is_service", False),
         is_active=True,
     )
     session.add(item)
     await session.flush()
     return item
+
+
+async def _ensure_fiscal_profile(
+    session: AsyncSession,
+    org_id: UUID,
+    data: Dict[str, Any],
+) -> OrganizationFiscalProfile:
+    Profile = cast(Any, OrganizationFiscalProfile)
+    existing = (
+        await session.execute(
+            select(OrganizationFiscalProfile).where(Profile.organization_id == org_id)
+        )
+    ).scalar_one_or_none()
+    if existing:
+        for key, value in data.items():
+            setattr(existing, key, value)
+        return existing
+
+    profile = OrganizationFiscalProfile(organization_id=org_id, **data)
+    session.add(profile)
+    await session.flush()
+    return profile
 
 
 async def _find_invoice_by_reference(
@@ -460,6 +537,9 @@ async def _ensure_invoice(
     lines: List[Dict[str, Any]],
     notes: Optional[str] = None,
     due_date: Optional[date] = None,
+    currency: str = "CRC",
+    exchange_rate: Optional[Decimal] = None,
+    exchange_rate_date: Optional[date] = None,
     issue: bool = False,
     payments: Optional[List[Dict[str, Any]]] = None,
     void: bool = False,
@@ -473,7 +553,9 @@ async def _ensure_invoice(
         customer_id=customer_id,
         payment_condition=payment_condition,
         status=InvoiceStatus.DRAFT.value,
-        currency="CRC",
+        currency=currency,
+        exchange_rate=exchange_rate if currency == "USD" else None,
+        exchange_rate_date=exchange_rate_date if currency == "USD" else None,
         reference_number=reference_number,
         notes=notes,
         due_date=due_date,
@@ -489,6 +571,10 @@ async def _ensure_invoice(
         tax_rate = Decimal(str(raw["tax_rate"])) if raw.get("tax_rate") is not None else None
         line_sub, line_tax, line_total = InvoiceService._line_amounts(quantity, unit_price, tax_rate)
         item: Optional[Item] = raw.get("item")
+        cabys = raw.get("cabys_code") or (item.cabys_code if item else None)
+        tax_code = raw.get("tax_code") or tax_rate_to_mh_code(
+            float(tax_rate) if tax_rate is not None else None
+        )
         session.add(
             InvoiceLine(
                 organization_id=org_id,
@@ -501,6 +587,8 @@ async def _ensure_invoice(
                 quantity=quantity,
                 unit_price=unit_price,
                 tax_rate=tax_rate,
+                tax_code=tax_code,
+                cabys_code=cabys,
                 line_subtotal=line_sub,
                 line_tax=line_tax,
                 line_total=line_total,
@@ -554,6 +642,8 @@ async def _seed_billing_demo(session: AsyncSession, orgs: Dict[str, Organization
     acme_id = orgs["acme-corp"].id
     nidus_id = orgs["nidus-labs"].id
 
+    await _ensure_fiscal_profile(session, acme_id, ACME_FISCAL_PROFILE)
+
     customers = {
         spec["tax_id"]: await _get_or_create_customer(session, acme_id, spec) for spec in ACME_CUSTOMERS
     }
@@ -569,7 +659,8 @@ async def _seed_billing_demo(session: AsyncSession, orgs: Dict[str, Organization
         {
             "name": "Nidus Client Demo",
             "email": "client@niduslabs.example",
-            "tax_id": "SEED-N-001",
+            "tax_id": "3101555001",
+            "identification_type": IdentificationType.JURIDICA.value,
         },
     )
 
@@ -577,9 +668,10 @@ async def _seed_billing_demo(session: AsyncSession, orgs: Dict[str, Organization
     consult = items["SRV-CONSULT"]
     support = items["SRV-SUPPORT"]
     cable = items["PRD-CABLE"]
-    ferreteria = customers["SEED-C-001"]
-    cafe = customers["SEED-C-002"]
-    clinica = customers["SEED-C-003"]
+    usd_hour = items["SRV-USD-HOUR"]
+    ferreteria = customers["3101987001"]
+    cafe = customers["3101987002"]
+    clinica = customers["3101987003"]
 
     await _ensure_invoice(
         session,
@@ -588,7 +680,7 @@ async def _seed_billing_demo(session: AsyncSession, orgs: Dict[str, Organization
         reference_number="SEED-DRAFT-001",
         payment_condition=PaymentCondition.CONTADO.value,
         status=InvoiceStatus.DRAFT.value,
-        notes="Demo draft — edit / issue / delete in UI",
+        notes="Demo draft CRC — edit / issue / delete in UI",
         lines=[
             {
                 "item": widget,
@@ -614,7 +706,7 @@ async def _seed_billing_demo(session: AsyncSession, orgs: Dict[str, Organization
         reference_number="SEED-ISSUED-001",
         payment_condition=PaymentCondition.CONTADO.value,
         status=InvoiceStatus.ISSUED.value,
-        notes="Demo issued unpaid — register a payment",
+        notes="Demo issued unpaid CRC — register a payment",
         issue=True,
         lines=[
             {
@@ -707,7 +799,73 @@ async def _seed_billing_demo(session: AsyncSession, orgs: Dict[str, Organization
                 "quantity": 1,
                 "unit_price": Decimal("10000.0000"),
                 "tax_rate": Decimal("13"),
+                "cabys_code": "83119900",
                 "unit": "unit",
+            }
+        ],
+    )
+
+    await _ensure_invoice(
+        session,
+        org_id=acme_id,
+        customer_id=ferreteria.id,
+        reference_number="SEED-FE-READY-001",
+        payment_condition=PaymentCondition.CONTADO.value,
+        status=InvoiceStatus.ISSUED.value,
+        notes="Demo CRC issued + CABYS — ready for mock Emit to Hacienda",
+        issue=True,
+        lines=[
+            {
+                "item": consult,
+                "description": consult.name,
+                "quantity": 2,
+                "unit_price": consult.unit_price,
+                "tax_rate": consult.tax_rate,
+            }
+        ],
+    )
+
+    await _ensure_invoice(
+        session,
+        org_id=acme_id,
+        customer_id=cafe.id,
+        reference_number="SEED-USD-DRAFT-001",
+        payment_condition=PaymentCondition.CONTADO.value,
+        status=InvoiceStatus.DRAFT.value,
+        currency="USD",
+        exchange_rate=Decimal("520.00000"),
+        exchange_rate_date=date.today(),
+        notes="Demo USD draft — edit rate / CABYS then issue",
+        lines=[
+            {
+                "item": usd_hour,
+                "description": usd_hour.name,
+                "quantity": 4,
+                "unit_price": usd_hour.unit_price,
+                "tax_rate": usd_hour.tax_rate,
+            }
+        ],
+    )
+
+    await _ensure_invoice(
+        session,
+        org_id=acme_id,
+        customer_id=clinica.id,
+        reference_number="SEED-USD-ISSUED-001",
+        payment_condition=PaymentCondition.CONTADO.value,
+        status=InvoiceStatus.ISSUED.value,
+        currency="USD",
+        exchange_rate=Decimal("520.00000"),
+        exchange_rate_date=date.today(),
+        notes="Demo USD issued + rate + CABYS — ready for mock Emit to Hacienda",
+        issue=True,
+        lines=[
+            {
+                "item": usd_hour,
+                "description": usd_hour.name,
+                "quantity": 3,
+                "unit_price": usd_hour.unit_price,
+                "tax_rate": usd_hour.tax_rate,
             }
         ],
     )
@@ -734,12 +892,18 @@ def _print_summary() -> None:
         print(f"  - {email} -> {org_slug} as {role_name}")
     print("")
     print("Acme billing demo (reference_number):")
-    print("  SEED-DRAFT-001     draft to edit/issue/delete")
-    print("  SEED-ISSUED-001    issued unpaid (pay)")
-    print("  SEED-PARTIAL-001   partial payment")
-    print("  SEED-PAID-001      paid + PDF")
-    print("  SEED-OVERDUE-001   credit overdue")
-    print("  SEED-VOID-001      void")
+    print("  SEED-DRAFT-001        CRC draft")
+    print("  SEED-ISSUED-001       CRC issued unpaid")
+    print("  SEED-PARTIAL-001      CRC partial")
+    print("  SEED-PAID-001         CRC paid + PDF")
+    print("  SEED-OVERDUE-001      CRC credit overdue")
+    print("  SEED-VOID-001         CRC void")
+    print("  SEED-FE-READY-001     CRC issued + CABYS → mock Emit Hacienda")
+    print("  SEED-USD-DRAFT-001    USD draft + rate")
+    print("  SEED-USD-ISSUED-001   USD issued + rate + CABYS → mock Emit Hacienda")
+    print("")
+    print("Acme also has fiscal profile (3101123456) for Hacienda emit.")
+    print("Catalog items include cabys_code defaults (incl. SRV-USD-HOUR).")
     print("")
     print("Suggested logins:")
     print("  owner@acme.dev     full Owner + audit on Acme")

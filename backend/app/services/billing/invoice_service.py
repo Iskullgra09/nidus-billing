@@ -76,6 +76,8 @@ class InvoiceService:
             payment_condition=invoice.payment_condition,
             status=invoice.status,
             currency=invoice.currency,
+            exchange_rate=invoice.exchange_rate,
+            exchange_rate_date=invoice.exchange_rate_date,
             document_number=invoice.document_number,
             reference_number=invoice.reference_number,
             notes=invoice.notes,
@@ -107,6 +109,8 @@ class InvoiceService:
             payment_condition=invoice.payment_condition,
             status=invoice.status,
             currency=invoice.currency,
+            exchange_rate=invoice.exchange_rate,
+            exchange_rate_date=invoice.exchange_rate_date,
             document_number=invoice.document_number,
             reference_number=invoice.reference_number,
             issued_at=invoice.issued_at,
@@ -253,12 +257,18 @@ class InvoiceService:
                     unit_price = item.unit_price
                 if tax_rate is None:
                     tax_rate = item.tax_rate
+                if not raw.cabys_code and item.cabys_code:
+                    cabys_from_item = item.cabys_code.strip()
+                else:
+                    cabys_from_item = None
+            else:
+                cabys_from_item = None
 
             line_subtotal, line_tax, line_total = InvoiceService._line_amounts(quantity, unit_price, tax_rate)
             tax_code = (raw.tax_code or tax_rate_to_mh_code(
                 float(tax_rate) if tax_rate is not None else None
             )).zfill(2)[:2]
-            cabys_code = raw.cabys_code.strip() if raw.cabys_code else None
+            cabys_code = (raw.cabys_code.strip() if raw.cabys_code else None) or cabys_from_item
             built.append(
                 InvoiceLine(
                     organization_id=org_id,
@@ -366,10 +376,15 @@ class InvoiceService:
             payment_condition=data.payment_condition.value,
             status=InvoiceStatus.DRAFT.value,
             currency=data.currency.value,
+            exchange_rate=data.exchange_rate,
+            exchange_rate_date=data.exchange_rate_date,
             reference_number=data.reference_number.strip() if data.reference_number else None,
             notes=data.notes,
             due_date=data.due_date,
         )
+        if invoice.currency == "CRC":
+            invoice.exchange_rate = None
+            invoice.exchange_rate_date = None
         session.add(invoice)
         await session.flush()
 
@@ -425,6 +440,13 @@ class InvoiceService:
             currency = payload["currency"]
             invoice.currency = currency.value if hasattr(currency, "value") else str(currency).upper()
             del payload["currency"]
+        if "exchange_rate" in payload:
+            invoice.exchange_rate = payload.pop("exchange_rate")
+        if "exchange_rate_date" in payload:
+            invoice.exchange_rate_date = payload.pop("exchange_rate_date")
+        if invoice.currency == "CRC":
+            invoice.exchange_rate = None
+            invoice.exchange_rate_date = None
         for key, value in payload.items():
             if key == "lines":
                 continue

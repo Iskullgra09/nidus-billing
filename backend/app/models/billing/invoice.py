@@ -27,6 +27,11 @@ class Invoice(UUIDMixin, TimestampMixin, SoftDeleteMixin, TenantMixin, table=Tru
         sa_column_kwargs={"server_default": InvoiceStatus.DRAFT.value},
     )
     currency: str = Field(default="CRC", max_length=3, nullable=False)
+    exchange_rate: Optional[Decimal] = Field(
+        default=None,
+        sa_column=sa.Column(sa.Numeric(18, 5), nullable=True),
+    )
+    exchange_rate_date: Optional[date] = Field(default=None)
     document_number: Optional[str] = Field(default=None, max_length=64)
     reference_number: Optional[str] = Field(default=None, max_length=64)
     notes: Optional[str] = Field(default=None, max_length=2000)

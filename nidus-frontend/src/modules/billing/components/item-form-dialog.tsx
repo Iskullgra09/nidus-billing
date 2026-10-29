@@ -31,6 +31,7 @@ const itemSchema = z.object({
   unit: z.string().min(1),
   unit_price: z.string().min(1),
   tax_rate: z.string().optional(),
+  cabys_code: z.string().optional(),
   is_service: z.boolean(),
   is_active: z.boolean(),
 });
@@ -65,6 +66,7 @@ export function ItemFormDialog({
       unit: "unit",
       unit_price: "0",
       tax_rate: "",
+      cabys_code: "",
       is_service: false,
       is_active: true,
     },
@@ -78,6 +80,7 @@ export function ItemFormDialog({
       unit: item?.unit ?? "unit",
       unit_price: formatMoneyInput(item?.unit_price ?? "0"),
       tax_rate: formatPercentInput(item?.tax_rate),
+      cabys_code: item?.cabys_code ?? "",
       is_service: item?.is_service ?? false,
       is_active: item?.is_active ?? true,
     });
@@ -97,6 +100,7 @@ export function ItemFormDialog({
       unit: values.unit,
       unit_price: values.unit_price,
       tax_rate: values.tax_rate ? values.tax_rate : null,
+      cabys_code: values.cabys_code || null,
       is_service: values.is_service,
       is_active: values.is_active,
     };
@@ -193,6 +197,19 @@ export function ItemFormDialog({
               )}
             />
           </div>
+          <FormField
+            control={form.control}
+            name="cabys_code"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>{t("fieldCabys")}</FormLabel>
+                <FormControl>
+                  <Input {...field} placeholder="85171200" />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
           <FormField
             control={form.control}
             name="description"
