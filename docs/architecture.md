@@ -1156,3 +1156,25 @@ This repo is a product fork of Nidus Core. Identical DB names, roles, and contai
 * **Negative:** Fresh volumes after rename; Core ADR history (001–059) remains platform origin, not Billing product roadmap.
 
 Product phases and Hacienda/email design land in later Billing ADRs (`B-002+`) when those slices are implemented — not in this ADR.
+
+---
+
+## ADR B-002: Parties & Lightweight Catalog (Phase B1)
+
+**Date:** 2026-10-29
+**Status:** Accepted
+
+### Context
+Billing needs durable master data before invoices: customers, suppliers, and sellable items/services. Full inventory (stock/kardex) belongs in a future product, not here.
+
+### Decision
+1. **Tables:** Tenant-scoped `customer`, `supplier`, and `item` with UUIDMixin + timestamps + soft-delete + RLS (`nidus_billing_app`).
+2. **Party shape:** Shared fields for customer/supplier (`name`, `email`, `phone`, `tax_id`, `notes`, `is_active`). Optional unique `tax_id` per org among active rows.
+3. **Catalog:** `item` with optional unique `sku`, `unit`, `unit_price`, optional `tax_rate` hint, `is_service` flag — no stock quantities.
+4. **Scopes:** `billing:customer|supplier|item:read|write`. Defaults: Admin write+read; Member/Viewer read.
+5. **API:** `/api/v1/billing/...` with `GenericResponse`, cursor pagination, soft-delete. Mutations audited.
+6. **Frontend:** `modules/billing/` under `/billing/customers|suppliers|items` with URL-as-state lists and Cmd+K entries.
+
+### Consequences
+* **Positive:** Clear foundation for B2 invoices; inventory stays out of this repo.
+* **Negative:** Party duplication (customer vs supplier tables) is intentional for later fiscal/inbound differences.

@@ -23,6 +23,13 @@ class NidusScope(StrEnum):
 
     AUDIT_READ = "audit:read"
 
+    CUSTOMER_READ = "billing:customer:read"
+    CUSTOMER_WRITE = "billing:customer:write"
+    SUPPLIER_READ = "billing:supplier:read"
+    SUPPLIER_WRITE = "billing:supplier:write"
+    ITEM_READ = "billing:item:read"
+    ITEM_WRITE = "billing:item:write"
+
     @classmethod
     def get_implied_scopes(cls, scope: str) -> Set[str]:
         """Calculates implicit permissions granted by holding a scope (write → read, invite → read)."""
@@ -91,14 +98,31 @@ DEFAULT_ROLES_CONFIG: Dict[DefaultRole, Dict[str, Any]] = {
             NidusScope.ROLE_READ,
             NidusScope.ROLE_WRITE,
             NidusScope.AUDIT_READ,
+            NidusScope.CUSTOMER_READ,
+            NidusScope.CUSTOMER_WRITE,
+            NidusScope.SUPPLIER_READ,
+            NidusScope.SUPPLIER_WRITE,
+            NidusScope.ITEM_READ,
+            NidusScope.ITEM_WRITE,
         ],
     },
     DefaultRole.MEMBER: {
         "description": "Standard collaborator. Can view the organization and fellow members.",
-        "scopes": [NidusScope.ORG_READ, NidusScope.MEMBER_READ],
+        "scopes": [
+            NidusScope.ORG_READ,
+            NidusScope.MEMBER_READ,
+            NidusScope.CUSTOMER_READ,
+            NidusScope.SUPPLIER_READ,
+            NidusScope.ITEM_READ,
+        ],
     },
     DefaultRole.VIEWER: {
         "description": "Read-only access for auditing or consultation purposes.",
-        "scopes": [NidusScope.ORG_READ],
+        "scopes": [
+            NidusScope.ORG_READ,
+            NidusScope.CUSTOMER_READ,
+            NidusScope.SUPPLIER_READ,
+            NidusScope.ITEM_READ,
+        ],
     },
 }

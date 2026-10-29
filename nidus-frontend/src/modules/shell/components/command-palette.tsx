@@ -2,23 +2,13 @@
 
 import * as React from "react";
 import { useTranslations } from "next-intl";
-import {
-  LayoutDashboard,
-  LogOut,
-  Shield,
-  Users,
-  Building2,
-  UserRound,
-  KeyRound,
-  Search,
-  ScrollText,
-} from "lucide-react";
+import { KeyRound, LogOut, Search } from "lucide-react";
 
 import { useRouter } from "@/core/i18n/routing";
+import { cn } from "@/core/lib/utils";
 import { useAuth } from "@/modules/identity/contexts/auth-context";
 import { logoutAction } from "@/modules/identity/actions/auth";
 import { hasScope } from "@/shared/access/permissions";
-import { NidusScope } from "@/shared/access/scopes";
 import { Button } from "@/shared/ui/button";
 import {
   CommandDialog,
@@ -29,19 +19,18 @@ import {
   CommandList,
   CommandSeparator,
 } from "@/shared/ui/command";
-import { cn } from "@/core/lib/utils";
+import {
+  SHELL_NAV_GROUPS,
+  SHELL_SIDEBAR_FOOTER_ITEMS,
+} from "../nav/config";
+import type { ShellNavItemId } from "../nav/types";
 
-type CommandPaletteVariant = "bar" | "icon";
-
-interface CommandPaletteProps {
-  variant?: CommandPaletteVariant;
-}
-
-export function CommandPalette({ variant = "bar" }: CommandPaletteProps) {
+export function CommandPalette() {
   const [open, setOpen] = React.useState(false);
   const router = useRouter();
   const { user } = useAuth();
   const t = useTranslations("CommandPalette");
+  const tNav = useTranslations("ShellNav");
 
   React.useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -62,41 +51,38 @@ export function CommandPalette({ variant = "bar" }: CommandPaletteProps) {
     [router],
   );
 
-  const canManageMembers = hasScope(user, NidusScope.MEMBER_READ);
-  const canManageRoles = hasScope(user, NidusScope.ROLE_READ);
-  const canReadAudit = hasScope(user, NidusScope.AUDIT_READ);
+  const itemLabel = (id: ShellNavItemId) => tNav(`item.${id}`);
 
   return (
     <>
-      {variant === "bar" ? (
-        <button
-          type="button"
-          onClick={() => setOpen(true)}
-          className={cn(
-            "group flex h-9 w-full items-center gap-2 rounded-lg border border-border/50",
-            "bg-muted/30 px-3 text-left text-sm text-muted-foreground",
-            "shadow-none transition-colors",
-            "hover:border-border hover:bg-muted/50 hover:text-foreground/80",
-            "focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring",
-          )}
-        >
-          <Search className="size-4 shrink-0 opacity-70" />
-          <span className="flex-1 truncate">{t("trigger")}</span>
-          <kbd className="pointer-events-none hidden h-5 select-none items-center gap-0.5 rounded border border-border/60 bg-background/80 px-1.5 font-mono text-[10px] font-medium text-muted-foreground sm:inline-flex">
-            ⌘K
-          </kbd>
-        </button>
-      ) : (
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon"
-          onClick={() => setOpen(true)}
-          aria-label={t("trigger")}
-        >
-          <Search className="size-4" />
-        </Button>
-      )}
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        className={cn(
+          "group hidden h-9 w-56 items-center gap-2 rounded-lg border border-border/50 lg:w-64",
+          "bg-muted/30 px-3 text-left text-sm text-muted-foreground",
+          "shadow-none transition-colors sm:flex",
+          "hover:border-border hover:bg-muted/50 hover:text-foreground/80",
+          "focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring",
+        )}
+      >
+        <Search className="size-4 shrink-0 opacity-70" />
+        <span className="flex-1 truncate">{t("trigger")}</span>
+        <kbd className="pointer-events-none hidden h-5 select-none items-center gap-0.5 rounded border border-border/60 bg-background/80 px-1.5 font-mono text-[10px] font-medium text-muted-foreground sm:inline-flex">
+          ⌘K
+        </kbd>
+      </button>
+
+      <Button
+        type="button"
+        variant="ghost"
+        size="icon"
+        className="sm:hidden"
+        onClick={() => setOpen(true)}
+        aria-label={t("trigger")}
+      >
+        <Search className="size-4" />
+      </Button>
 
       <CommandDialog
         open={open}
@@ -107,21 +93,51 @@ export function CommandPalette({ variant = "bar" }: CommandPaletteProps) {
         <CommandInput placeholder={t("placeholder")} />
         <CommandList>
           <CommandEmpty>{t("empty")}</CommandEmpty>
-          <CommandGroup heading={t("groupNavigate")}>
-            <CommandItem
-              value="dashboard control centro /dashboard"
-              onSelect={() => run("/dashboard")}
-            >
-              <LayoutDashboard />
-              {t("dashboard")}
-            </CommandItem>
-            <CommandItem
-              value="profile perfil settings /settings/profile"
-              onSelect={() => run("/settings/profile")}
-            >
-              <UserRound />
-              {t("profile")}
-            </CommandItem>
+
+          {SHELL_NAV_GROUPS.map((group) => {
+            const visibleItems = group.items.filter(
+              (item) => !item.scope || hasScope(user, item.scope),
+            );
+            if (visibleItems.length === 0) return null;
+
+            return (
+              <CommandGroup
+                key={group.id}
+                heading={tNav(`group.${group.id}`)}
+              >
+                {visibleItems.map((item) => {
+                  const Icon = item.icon;
+                  const label = itemLabel(item.id);
+                  return (
+                    <CommandItem
+                      key={item.id}
+                      value={`${label} ${item.keywords} ${item.href}`}
+                      onSelect={() => run(item.href)}
+                    >
+                      <Icon />
+                      {label}
+                    </CommandItem>
+                  );
+                })}
+              </CommandGroup>
+            );
+          })}
+
+          <CommandGroup heading={t("groupPersonal")}>
+            {SHELL_SIDEBAR_FOOTER_ITEMS.map((item) => {
+              const Icon = item.icon;
+              const label = itemLabel(item.id);
+              return (
+                <CommandItem
+                  key={item.id}
+                  value={`${label} ${item.keywords} ${item.href}`}
+                  onSelect={() => run(item.href)}
+                >
+                  <Icon />
+                  {label}
+                </CommandItem>
+              );
+            })}
             <CommandItem
               value="security seguridad password /settings/security"
               onSelect={() => run("/settings/security")}
@@ -129,41 +145,8 @@ export function CommandPalette({ variant = "bar" }: CommandPaletteProps) {
               <KeyRound />
               {t("security")}
             </CommandItem>
-            <CommandItem
-              value="organization organizacion workspace /settings/organization"
-              onSelect={() => run("/settings/organization")}
-            >
-              <Building2 />
-              {t("organization")}
-            </CommandItem>
-            {canManageMembers && (
-              <CommandItem
-                value="members miembros team invite /settings/organization/members"
-                onSelect={() => run("/settings/organization/members")}
-              >
-                <Users />
-                {t("members")}
-              </CommandItem>
-            )}
-            {canManageRoles && (
-              <CommandItem
-                value="roles permisos permissions scopes /settings/organization/roles"
-                onSelect={() => run("/settings/organization/roles")}
-              >
-                <Shield />
-                {t("roles")}
-              </CommandItem>
-            )}
-            {canReadAudit && (
-              <CommandItem
-                value="audit auditoria logs activity /settings/organization/audit"
-                onSelect={() => run("/settings/organization/audit")}
-              >
-                <ScrollText />
-                {t("audit")}
-              </CommandItem>
-            )}
           </CommandGroup>
+
           <CommandSeparator />
           <CommandGroup heading={t("groupAccount")}>
             <CommandItem

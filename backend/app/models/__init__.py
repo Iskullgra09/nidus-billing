@@ -1,4 +1,7 @@
 from .audit.audit_log import AuditLog as AuditLog
+from .billing.customer import Customer as Customer
+from .billing.item import Item as Item
+from .billing.supplier import Supplier as Supplier
 from .identity.invitation import Invitation as Invitation
 from .identity.member import Member as Member
 from .identity.role import Role as Role

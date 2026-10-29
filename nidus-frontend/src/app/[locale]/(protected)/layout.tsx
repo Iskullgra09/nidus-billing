@@ -7,7 +7,7 @@ import {
   getUserOrganizations,
   hasSessionCookie,
 } from "@/modules/identity/actions/auth";
-import { TopBar } from "@/modules/shell/components/top-bar";
+import { AppShell } from "@/modules/shell/components/app-shell";
 import { AuthProvider } from "@/modules/identity/contexts/auth-context";
 import { UserPreferencesSync } from "@/modules/identity/components/user-preferences-sync";
 
@@ -31,12 +31,9 @@ export default async function ProtectedLayout({
   return (
     <AuthProvider initialUser={user}>
       <UserPreferencesSync user={user} />
-      <div className="flex min-h-screen flex-col bg-background">
-        <TopBar user={user} organizations={organizations} />
-        <main className="flex-1 p-6 lg:p-8">
-          <div className="mx-auto max-w-6xl">{children}</div>
-        </main>
-      </div>
+      <AppShell user={user} organizations={organizations}>
+        {children}
+      </AppShell>
     </AuthProvider>
   );
 }

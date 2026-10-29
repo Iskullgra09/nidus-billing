@@ -98,6 +98,9 @@ async def cleanup_and_seed() -> None:
         async with session.begin():
             tables_to_truncate: List[str] = [
                 "audit_log",
+                "item",
+                "customer",
+                "supplier",
                 "invitation",
                 "member",
                 "role",
