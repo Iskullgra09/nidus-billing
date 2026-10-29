@@ -5,7 +5,12 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field
 
-from app.models.billing.enums import PaymentCondition, PaymentMethod
+from app.models.billing.enums import (
+    HaciendaEnvironment,
+    IdentificationType,
+    PaymentCondition,
+    PaymentMethod,
+)
 
 
 class PartyCreate(BaseModel):
@@ -93,3 +98,28 @@ class InvoiceSendEmail(BaseModel):
     to_email: Optional[EmailStr] = None
     subject: Optional[str] = Field(default=None, max_length=255)
     message: Optional[str] = Field(default=None, max_length=2000)
+
+
+class FiscalProfileUpsert(BaseModel):
+    legal_name: str = Field(min_length=1, max_length=255)
+    trade_name: Optional[str] = Field(default=None, max_length=255)
+    identification_type: IdentificationType = IdentificationType.JURIDICA
+    identification_number: str = Field(min_length=1, max_length=32)
+    economic_activity_code: Optional[str] = Field(default=None, max_length=16)
+    branch_code: Optional[str] = Field(default=None, max_length=16)
+    province: Optional[str] = Field(default=None, max_length=64)
+    canton: Optional[str] = Field(default=None, max_length=64)
+    district: Optional[str] = Field(default=None, max_length=64)
+    other_signs: Optional[str] = Field(default=None, max_length=255)
+    phone: Optional[str] = Field(default=None, max_length=32)
+    email: Optional[EmailStr] = None
+    country_code: str = Field(default="CR", min_length=2, max_length=2)
+
+
+class HaciendaCredentialUpsert(BaseModel):
+    environment: HaciendaEnvironment = HaciendaEnvironment.SANDBOX
+    username: Optional[str] = Field(default=None, max_length=255)
+    p12_password: Optional[str] = Field(default=None, max_length=255)
+    pin: Optional[str] = Field(default=None, max_length=64)
+    oauth_client_id: Optional[str] = Field(default=None, max_length=255)
+    oauth_client_secret: Optional[str] = Field(default=None, max_length=512)

@@ -23,6 +23,8 @@ from app.core.config import settings  # type: ignore
 from app.models.audit.audit_log import AuditLog  # type: ignore
 from app.models.billing.customer import Customer  # type: ignore
 from app.models.billing.document_series import DocumentSeries  # type: ignore
+from app.models.billing.fiscal_profile import OrganizationFiscalProfile  # type: ignore
+from app.models.billing.hacienda_credential import OrganizationHaciendaCredential  # type: ignore
 from app.models.billing.invoice import Invoice, InvoiceLine  # type: ignore
 from app.models.billing.invoice_email import InvoiceEmailDelivery  # type: ignore
 from app.models.billing.item import Item  # type: ignore

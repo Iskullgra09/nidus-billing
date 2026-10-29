@@ -14,6 +14,7 @@ type SettingsPath =
   | "/settings/profile"
   | "/settings/security"
   | "/settings/organization"
+  | "/settings/organization/fiscal"
   | "/settings/organization/members"
   | "/settings/organization/roles"
   | "/settings/organization/audit";
@@ -78,6 +79,16 @@ export function SettingsSidebar({ className, ...props }: SidebarNavProps) {
                 href: "/settings/organization",
               }}
               isActive={pathname === "/settings/organization"}
+            />
+          </CanAccess>
+
+          <CanAccess scope={NidusScope.FISCAL_WRITE}>
+            <SidebarNavItem
+              item={{
+                title: t("navFiscal"),
+                href: "/settings/organization/fiscal",
+              }}
+              isActive={pathname === "/settings/organization/fiscal"}
             />
           </CanAccess>
 

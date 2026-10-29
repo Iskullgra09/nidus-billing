@@ -134,3 +134,38 @@ class InvoiceEmailDeliveryResponse(BaseModel):
     updated_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class FiscalProfileResponse(BaseModel):
+    id: UUID
+    organization_id: UUID
+    legal_name: str
+    trade_name: Optional[str] = None
+    identification_type: str
+    identification_number: str
+    economic_activity_code: Optional[str] = None
+    branch_code: Optional[str] = None
+    province: Optional[str] = None
+    canton: Optional[str] = None
+    district: Optional[str] = None
+    other_signs: Optional[str] = None
+    phone: Optional[str] = None
+    email: Optional[str] = None
+    country_code: str
+    created_at: datetime
+    updated_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class HaciendaCredentialStatusResponse(BaseModel):
+    configured: bool
+    environment: str
+    username: Optional[str] = None
+    has_p12: bool
+    has_p12_password: bool
+    has_pin: bool
+    has_oauth_client_secret: bool
+    oauth_client_id: Optional[str] = None
+    updated_at: Optional[datetime] = None
+

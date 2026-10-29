@@ -59,7 +59,12 @@
         "payment_created": "Pago registrado exitosamente.",
         "payment_deleted": "Pago eliminado exitosamente.",
         "invoice_emails_retrieved": "Historial de envíos obtenido exitosamente.",
-        "invoice_email_sent": "Correo de factura enviado exitosamente."
+        "invoice_email_sent": "Correo de factura enviado exitosamente.",
+        "fiscal_profile_retrieved": "Perfil fiscal recuperado exitosamente.",
+        "fiscal_profile_updated": "Perfil fiscal guardado exitosamente.",
+        "hacienda_credentials_retrieved": "Estado de credenciales de Hacienda recuperado exitosamente.",
+        "hacienda_credentials_updated": "Credenciales de Hacienda guardadas exitosamente.",
+        "hacienda_credentials_deleted": "Credenciales de Hacienda eliminadas exitosamente."
     },
     "billing": {
         "customer_tax_id_conflict": "Ya existe un cliente con el tax id '{tax_id}' en esta organización.",

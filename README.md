@@ -49,7 +49,7 @@ Phases are **product slices**, not Core’s old Phase 1–16 list. Status update
 | **B2** | Operational docs (contado/crédito) + PDF | Done |
 | **B3** | Numbering, payments & balances | Done |
 | **B4** | Outbound email (send invoice) | Done |
-| **B5** | Org fiscal profile & Hacienda credentials | Planned |
+| **B5** | Org fiscal profile & Hacienda credentials | In progress |
 | **B6** | Hacienda outbound (emit + verify) | Planned |
 | **B7** | Hacienda inbound (receive / accept-reject) | Planned |
 | **B8** | Inbound email mailbox (load supplier invoices) | Planned |
@@ -95,10 +95,11 @@ Operational billing (B1–B4) can ship value before fiscal/Hacienda. Email send 
 
 ### B5 — Org fiscal profile & Hacienda credentials
 
-**Backend:** CR fiscal fields per org (nombre, cédula/juridica, actividad económica, sucursal, etc.); encrypted store for `.p12` / API OAuth secrets; never commit secrets.  
+**Backend:** CR fiscal fields per org (nombre, cédula/juridica, actividad económica, sucursal, etc.); encrypted store for `.p12` / API OAuth secrets; never commit secrets. Scopes `billing:fiscal:read|write` on Admin/Owner.  
 **Frontend:** Organization → Fiscal / Hacienda settings UI.  
 **Security:** app-role cannot read raw private keys in logs/audit metadata.  
-**Out of scope:** live Hacienda calls (B6).
+**Existing orgs:** re-run `uv run seed.py` (or edit Admin role scopes) so Admin picks up `billing:fiscal:*`; then re-login.  
+**Out of scope:** live Hacienda calls (B6); CRC/USD currency UI / FX (see backlog).
 
 ### B6 — Hacienda outbound (emit + verify)
 
@@ -170,6 +171,7 @@ These are **commercial / AR** states on `invoice.status`. They are **not** Hacie
 
 Ideas raised during B2/B3 UX that belong later — keep here so they are not lost:
 
+- **Multi-currency (CRC + USD):** Costa Rica tenants often invoice in colones and dollars. Today `invoice.currency` defaults to `CRC` with no UI whitelist or FX. Next step: allow **CRC | USD** on invoices (no automatic conversion). **FX / tipo de cambio** (BCCR rates, rate date, multi-currency AR reports) is a later slice — do **not** fold into B5 fiscal profile.
 - **Tax catalog / multi-rate lines:** codes beyond a single `%` per line (IVA 1/2/4/13, exento, turismo, retenciones). Fits fiscal depth around **B5–B6**, not rewriting B2 money fields now.
 - **Richer invoice UX:** full-page document route, print CSS, line editor closer to paper invoice; polish in **B9**.
 - **Quotes → invoice:** optional conversion path under operational docs / B9.

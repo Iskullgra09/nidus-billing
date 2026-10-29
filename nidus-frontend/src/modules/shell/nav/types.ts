@@ -11,6 +11,7 @@ export type ShellNavItemId =
   | "invoices"
   | "settings"
   | "organization"
+  | "fiscal"
   | "members"
   | "roles"
   | "audit";

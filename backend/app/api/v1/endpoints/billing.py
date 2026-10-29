@@ -1,15 +1,19 @@
-from typing import Any
+from typing import Any, Optional
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, Response, status
+from fastapi import APIRouter, Depends, File, Form, Response, UploadFile, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import ScopeGuard, get_current_tenant_session, get_jwt_payload, get_language
 from app.core.exceptions.base import AuthenticationError
 from app.core.i18n.service import i18n
+from app.core.rate_limit import RateLimit
+from app.models.billing.enums import HaciendaEnvironment
 from app.models.identity.scopes import NidusScope
 from app.schemas.filters.billing import InvoiceFilter, ItemFilter, PartyFilter
 from app.schemas.requests.billing import (
+    FiscalProfileUpsert,
+    HaciendaCredentialUpsert,
     InvoiceCreate,
     InvoicePaymentCreate,
     InvoiceSendEmail,
@@ -22,6 +26,8 @@ from app.schemas.requests.billing import (
 from app.schemas.requests.pagination import CursorParams
 from app.schemas.responses.base import GenericResponse
 from app.schemas.responses.billing import (
+    FiscalProfileResponse,
+    HaciendaCredentialStatusResponse,
     InvoiceEmailDeliveryResponse,
     InvoiceListItem,
     InvoicePaymentResponse,
@@ -32,6 +38,7 @@ from app.schemas.responses.billing import (
 from app.schemas.responses.pagination import CursorPage
 from app.services.billing import (
     CustomerService,
+    FiscalService,
     InvoiceEmailService,
     InvoiceService,
     ItemService,
@@ -475,3 +482,114 @@ async def send_invoice_email(
         lang=lang,
     )
     return GenericResponse(data=delivery, message=i18n.t("success.invoice_email_sent", lang=lang))
+
+
+@router.get(
+    "/fiscal-profile",
+    response_model=GenericResponse[Optional[FiscalProfileResponse]],
+    dependencies=[Depends(ScopeGuard(NidusScope.FISCAL_READ))],
+)
+async def get_fiscal_profile(
+    session: AsyncSession = Depends(get_current_tenant_session),
+    payload: dict[str, Any] = Depends(get_jwt_payload),
+    lang: str = Depends(get_language),
+):
+    org_id = _require_org_id(payload)
+    data = await FiscalService.get_profile(session, org_id)
+    return GenericResponse(data=data, message=i18n.t("success.fiscal_profile_retrieved", lang=lang))
+
+
+@router.put(
+    "/fiscal-profile",
+    response_model=GenericResponse[FiscalProfileResponse],
+    dependencies=[Depends(ScopeGuard(NidusScope.FISCAL_WRITE))],
+)
+async def upsert_fiscal_profile(
+    data: FiscalProfileUpsert,
+    session: AsyncSession = Depends(get_current_tenant_session),
+    payload: dict[str, Any] = Depends(get_jwt_payload),
+    lang: str = Depends(get_language),
+):
+    org_id = _require_org_id(payload)
+    profile = await FiscalService.upsert_profile(session, org_id, data)
+    return GenericResponse(data=profile, message=i18n.t("success.fiscal_profile_updated", lang=lang))
+
+
+@router.get(
+    "/hacienda-credentials",
+    response_model=GenericResponse[HaciendaCredentialStatusResponse],
+    dependencies=[Depends(ScopeGuard(NidusScope.FISCAL_READ))],
+)
+async def get_hacienda_credentials(
+    session: AsyncSession = Depends(get_current_tenant_session),
+    payload: dict[str, Any] = Depends(get_jwt_payload),
+    lang: str = Depends(get_language),
+):
+    org_id = _require_org_id(payload)
+    data = await FiscalService.get_credential_status(session, org_id)
+    return GenericResponse(
+        data=data,
+        message=i18n.t("success.hacienda_credentials_retrieved", lang=lang),
+    )
+
+
+@router.put(
+    "/hacienda-credentials",
+    response_model=GenericResponse[HaciendaCredentialStatusResponse],
+    dependencies=[
+        Depends(ScopeGuard(NidusScope.FISCAL_WRITE)),
+        Depends(RateLimit("billing.hacienda_credentials", tier="strict")),
+    ],
+)
+async def upsert_hacienda_credentials(
+    environment: HaciendaEnvironment = Form(default=HaciendaEnvironment.SANDBOX),
+    username: Optional[str] = Form(default=None),
+    p12_password: Optional[str] = Form(default=None),
+    pin: Optional[str] = Form(default=None),
+    oauth_client_id: Optional[str] = Form(default=None),
+    oauth_client_secret: Optional[str] = Form(default=None),
+    p12_file: Optional[UploadFile] = File(default=None),
+    session: AsyncSession = Depends(get_current_tenant_session),
+    payload: dict[str, Any] = Depends(get_jwt_payload),
+    lang: str = Depends(get_language),
+):
+    org_id = _require_org_id(payload)
+    p12_bytes: Optional[bytes] = None
+    if p12_file is not None and p12_file.filename:
+        p12_bytes = await p12_file.read()
+    data = HaciendaCredentialUpsert(
+        environment=environment,
+        username=username,
+        p12_password=p12_password,
+        pin=pin,
+        oauth_client_id=oauth_client_id,
+        oauth_client_secret=oauth_client_secret,
+    )
+    status_payload = await FiscalService.upsert_credentials(
+        session,
+        org_id,
+        data,
+        p12_bytes=p12_bytes,
+    )
+    return GenericResponse(
+        data=status_payload,
+        message=i18n.t("success.hacienda_credentials_updated", lang=lang),
+    )
+
+
+@router.delete(
+    "/hacienda-credentials",
+    response_model=GenericResponse[HaciendaCredentialStatusResponse],
+    dependencies=[Depends(ScopeGuard(NidusScope.FISCAL_WRITE))],
+)
+async def delete_hacienda_credentials(
+    session: AsyncSession = Depends(get_current_tenant_session),
+    payload: dict[str, Any] = Depends(get_jwt_payload),
+    lang: str = Depends(get_language),
+):
+    org_id = _require_org_id(payload)
+    data = await FiscalService.delete_credentials(session, org_id)
+    return GenericResponse(
+        data=data,
+        message=i18n.t("success.hacienda_credentials_deleted", lang=lang),
+    )

@@ -59,7 +59,12 @@
         "payment_created": "Payment recorded successfully.",
         "payment_deleted": "Payment removed successfully.",
         "invoice_emails_retrieved": "Email delivery history retrieved successfully.",
-        "invoice_email_sent": "Invoice email sent successfully."
+        "invoice_email_sent": "Invoice email sent successfully.",
+        "fiscal_profile_retrieved": "Fiscal profile retrieved successfully.",
+        "fiscal_profile_updated": "Fiscal profile saved successfully.",
+        "hacienda_credentials_retrieved": "Hacienda credential status retrieved successfully.",
+        "hacienda_credentials_updated": "Hacienda credentials saved successfully.",
+        "hacienda_credentials_deleted": "Hacienda credentials removed successfully."
     },
     "billing": {
         "customer_tax_id_conflict": "A customer with tax id '{tax_id}' already exists in this organization.",
