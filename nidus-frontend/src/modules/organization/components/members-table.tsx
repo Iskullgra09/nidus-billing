@@ -26,6 +26,7 @@ import { updateMemberRoleAction, removeMemberAction } from "../actions/members";
 import { RoleResponse } from "@/modules/access/types/roles";
 import { CanAccess } from "@/modules/access/components/can-access";
 import { NidusScope } from "@/shared/access/scopes";
+import { ConfirmDialog } from "@/shared/components/layout/confirm-dialog";
 import { DataTable, ColumnDef } from "@/shared/components/layout/data-table";
 import { PageInfo } from "@/core/types/api";
 
@@ -50,6 +51,9 @@ export function MembersTable({
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  const [removeTargetId, setRemoveTargetId] = React.useState<string | null>(
+    null,
+  );
 
   const assignableRoles = roles.filter(
     (role) => role.name.toLowerCase() !== "owner",
@@ -83,14 +87,15 @@ export function MembersTable({
     }
   };
 
-  const handleRemove = async (memberId: string) => {
-    if (!confirm(t("removeConfirm") || "Are you sure?")) return;
-    const res = await removeMemberAction(memberId);
+  const handleRemove = async () => {
+    if (!removeTargetId) return;
+    const res = await removeMemberAction(removeTargetId);
     if (res.status === "success") {
       toast.success(res.message);
     } else {
       toast.error(res.message);
     }
+    setRemoveTargetId(null);
   };
 
   const columns: ColumnDef<MemberResponse>[] = [
@@ -156,7 +161,7 @@ export function MembersTable({
                   <DropdownMenuSeparator />
                   <DropdownMenuItem
                     className="text-destructive focus:bg-destructive/10 focus:text-destructive cursor-pointer"
-                    onClick={() => handleRemove(member.id)}
+                    onClick={() => setRemoveTargetId(member.id)}
                   >
                     <UserMinus className="mr-2 h-4 w-4" />
                     <span className="font-medium">{t("removeMember")}</span>
@@ -170,37 +175,51 @@ export function MembersTable({
   ];
 
   return (
-    <DataTable
-      mode="cursor"
-      data={members}
-      columns={columns}
-      pageSize={pageSize}
-      searchPlaceholder={t("searchPlaceholder")}
-      emptyMessage={t("noMembersFound")}
-      initialSearch={searchQuery}
-      hasNextPage={pageInfo.has_next_page}
-      isFirstPage={!searchParams.get("cursor")}
-      rowCountLabel={t("pageRowCount", { count: members.length })}
-      onSearchChange={(query) => {
-        const next = query.trim();
-        if (next === searchQuery) return;
-        replaceParams((params) => {
-          if (next) params.set("q", next);
-          else params.delete("q");
-          params.delete("cursor");
-        });
-      }}
-      onNextPage={() => {
-        if (!pageInfo.end_cursor) return;
-        replaceParams((params) => {
-          params.set("cursor", pageInfo.end_cursor!);
-        });
-      }}
-      onFirstPage={() => {
-        replaceParams((params) => {
-          params.delete("cursor");
-        });
-      }}
-    />
+    <>
+      <DataTable
+        mode="cursor"
+        data={members}
+        columns={columns}
+        pageSize={pageSize}
+        searchPlaceholder={t("searchPlaceholder")}
+        emptyMessage={t("noMembersFound")}
+        initialSearch={searchQuery}
+        hasNextPage={pageInfo.has_next_page}
+        isFirstPage={!searchParams.get("cursor")}
+        rowCountLabel={t("pageRowCount", { count: members.length })}
+        onSearchChange={(query) => {
+          const next = query.trim();
+          if (next === searchQuery) return;
+          replaceParams((params) => {
+            if (next) params.set("q", next);
+            else params.delete("q");
+            params.delete("cursor");
+          });
+        }}
+        onNextPage={() => {
+          if (!pageInfo.end_cursor) return;
+          replaceParams((params) => {
+            params.set("cursor", pageInfo.end_cursor!);
+          });
+        }}
+        onFirstPage={() => {
+          replaceParams((params) => {
+            params.delete("cursor");
+          });
+        }}
+      />
+
+      <ConfirmDialog
+        open={removeTargetId !== null}
+        onOpenChange={(open) => {
+          if (!open) setRemoveTargetId(null);
+        }}
+        title={t("removeDialogTitle")}
+        description={t("removeConfirm")}
+        confirmLabel={t("removeConfirmAction")}
+        variant="destructive"
+        onConfirm={handleRemove}
+      />
+    </>
   );
 }

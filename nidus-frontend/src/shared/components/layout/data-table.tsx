@@ -191,11 +191,11 @@ export function DataTable<TData>(props: DataTableProps<TData>) {
       )}
 
       <div
-        className="rounded-xl border border-border/60 bg-card/40 backdrop-blur-sm shadow-sm flex flex-col overflow-hidden relative [&>div]:overflow-hidden"
+        className="relative flex flex-col overflow-hidden rounded-xl border border-border/80 bg-card shadow-md ring-1 ring-foreground/5 backdrop-blur-sm [&>div]:overflow-hidden"
         style={{ height: containerHeight }}
       >
         <Table className="flex-1 w-full">
-          <TableHeader className="bg-muted/40 border-b border-border/60 sticky top-0 z-10">
+          <TableHeader className="sticky top-0 z-10 border-b border-border/70 bg-muted/55">
             <TableRow className="hover:bg-transparent h-12">
               {columns.map((col, index) => {
                 const align = col.align ?? "left";

@@ -112,7 +112,8 @@
     "closeAction": "Cerrar",
     "editAction": "Editar",
     "deleteAction": "Eliminar",
-    "deleteConfirm": "¿Eliminar el cliente {name}?"
+    "deleteDialogTitle": "Eliminar cliente",
+    "deleteConfirm": "¿Eliminar el cliente {name}? Se ocultará de las listas; el registro se conserva en auditoría."
   },
   "BillingSuppliers": {
     "title": "Proveedores",
@@ -142,7 +143,8 @@
     "closeAction": "Cerrar",
     "editAction": "Editar",
     "deleteAction": "Eliminar",
-    "deleteConfirm": "¿Eliminar el proveedor {name}?"
+    "deleteDialogTitle": "Eliminar proveedor",
+    "deleteConfirm": "¿Eliminar el proveedor {name}? Se ocultará de las listas; el registro se conserva en auditoría."
   },
   "BillingItems": {
     "title": "Catálogo",
@@ -175,7 +177,8 @@
     "closeAction": "Cerrar",
     "editAction": "Editar",
     "deleteAction": "Eliminar",
-    "deleteConfirm": "¿Eliminar el ítem {name}?"
+    "deleteDialogTitle": "Eliminar ítem",
+    "deleteConfirm": "¿Eliminar el ítem {name}? Se ocultará del catálogo; el registro se conserva en auditoría."
   },
   "BillingInvoices": {
     "title": "Facturas",
@@ -234,7 +237,10 @@
     "voidAction": "Anular",
     "pdfAction": "PDF",
     "emailAction": "Enviar email",
-    "emailPrompt": "Correo destino (vacío = email del cliente):",
+    "emailDialogTitle": "Enviar factura por correo",
+    "emailDialogDescription": "Déjalo vacío para usar el email del cliente.",
+    "emailLabel": "Correo destino",
+    "emailSend": "Enviar correo",
     "emailsTitle": "Envíos por correo",
     "emailsEmpty": "Aún no se ha enviado esta factura por correo.",
     "emailStatus": {
@@ -243,9 +249,15 @@
       "mocked": "Simulado (dev)"
     },
     "paymentAction": "Registrar pago",
-    "paymentPrompt": "Monto del pago (saldo {balance}):",
-    "deleteConfirm": "¿Eliminar este borrador?",
-    "voidConfirm": "¿Anular esta factura emitida?",
+    "paymentDialogTitle": "Registrar pago",
+    "paymentDialogDescription": "Saldo pendiente: {balance}",
+    "paymentLabel": "Monto",
+    "paymentConfirm": "Registrar pago",
+    "deleteDialogTitle": "Eliminar borrador",
+    "deleteConfirm": "¿Eliminar este borrador? Se ocultará de las listas; el registro se conserva en auditoría.",
+    "voidDialogTitle": "Anular factura",
+    "voidConfirm": "¿Anular esta factura emitida? El documento queda en auditoría, pero ya no se puede pagar ni enviar por correo.",
+    "voidConfirmAction": "Anular",
     "loadError": "No se pudo cargar la factura."
   },
   "Validation": {
@@ -278,6 +290,8 @@
     "showPassword": "Ver contraseña",
     "hidePassword": "Ocultar contraseña",
     "cancel": "Cancelar",
+    "confirm": "Confirmar",
+    "delete": "Eliminar",
     "submit": "Enviar",
     "loading": "Cargando...",
     "success": "Operación exitosa"
@@ -389,7 +403,9 @@
     "roleViewer": "Observador",
     "changeRole": "Cambiar Rol",
     "removeMember": "Eliminar del equipo",
-    "removeConfirm": "¿Estás seguro de que deseas eliminar a este miembro?",
+    "removeDialogTitle": "Quitar miembro",
+    "removeConfirm": "¿Quitar a este miembro? Perderá el acceso a este espacio de trabajo.",
+    "removeConfirmAction": "Quitar",
     "removeSuccess": "Miembro eliminado correctamente.",
     "roleUpdateSuccess": "Rol actualizado correctamente.",
     "noMembersFound": "No se encontraron miembros en esta organización.",
@@ -398,7 +414,9 @@
     "pendingTitle": "Invitaciones pendientes",
     "pendingDescription": "Personas invitadas que aún no han ingresado.",
     "revokeInvite": "Revocar",
-    "revokeConfirm": "¿Revocar esta invitación?",
+    "revokeDialogTitle": "Revocar invitación",
+    "revokeConfirm": "¿Revocar esta invitación? El destinatario ya no podrá unirse con este enlace.",
+    "revokeConfirmAction": "Revocar",
     "noPendingInvites": "No hay invitaciones pendientes.",
     "tabMembers": "Miembros",
     "tabInvitations": "Invitaciones",
@@ -424,7 +442,8 @@
     "tableActions": "Acciones",
     "searchPlaceholder": "Buscar roles...",
     "noRolesFound": "No se encontraron roles.",
-    "deleteConfirm": "¿Eliminar el rol \"{name}\"?"
+    "deleteDialogTitle": "Eliminar rol",
+    "deleteConfirm": "¿Eliminar el rol \"{name}\"? Se ocultará; el cambio queda en auditoría."
   },
   "Invitations": {
     "inviteMember": "Invitar Miembro",

@@ -112,7 +112,8 @@
     "closeAction": "Close",
     "editAction": "Edit",
     "deleteAction": "Delete",
-    "deleteConfirm": "Delete customer {name}?"
+    "deleteDialogTitle": "Delete customer",
+    "deleteConfirm": "Delete customer {name}? It will be hidden from lists; the record is kept for audit."
   },
   "BillingSuppliers": {
     "title": "Suppliers",
@@ -142,7 +143,8 @@
     "closeAction": "Close",
     "editAction": "Edit",
     "deleteAction": "Delete",
-    "deleteConfirm": "Delete supplier {name}?"
+    "deleteDialogTitle": "Delete supplier",
+    "deleteConfirm": "Delete supplier {name}? It will be hidden from lists; the record is kept for audit."
   },
   "BillingItems": {
     "title": "Catalog",
@@ -175,7 +177,8 @@
     "closeAction": "Close",
     "editAction": "Edit",
     "deleteAction": "Delete",
-    "deleteConfirm": "Delete item {name}?"
+    "deleteDialogTitle": "Delete item",
+    "deleteConfirm": "Delete item {name}? It will be hidden from the catalog; the record is kept for audit."
   },
   "BillingInvoices": {
     "title": "Invoices",
@@ -234,7 +237,10 @@
     "voidAction": "Void",
     "pdfAction": "PDF",
     "emailAction": "Send email",
-    "emailPrompt": "Destination email (blank = customer email):",
+    "emailDialogTitle": "Send invoice email",
+    "emailDialogDescription": "Leave blank to use the customer email on file.",
+    "emailLabel": "Destination email",
+    "emailSend": "Send email",
     "emailsTitle": "Email deliveries",
     "emailsEmpty": "This invoice has not been emailed yet.",
     "emailStatus": {
@@ -243,9 +249,15 @@
       "mocked": "Mocked (dev)"
     },
     "paymentAction": "Record payment",
-    "paymentPrompt": "Payment amount (balance {balance}):",
-    "deleteConfirm": "Delete this draft invoice?",
-    "voidConfirm": "Void this issued invoice?",
+    "paymentDialogTitle": "Record payment",
+    "paymentDialogDescription": "Outstanding balance: {balance}",
+    "paymentLabel": "Amount",
+    "paymentConfirm": "Record payment",
+    "deleteDialogTitle": "Delete draft",
+    "deleteConfirm": "Delete this draft invoice? It will be hidden from lists; the record is kept for audit.",
+    "voidDialogTitle": "Void invoice",
+    "voidConfirm": "Void this issued invoice? The document stays for audit but can no longer be paid or emailed.",
+    "voidConfirmAction": "Void",
     "loadError": "Could not load invoice."
   },
   "Validation": {
@@ -278,6 +290,8 @@
     "showPassword": "Show password",
     "hidePassword": "Hide password",
     "cancel": "Cancel",
+    "confirm": "Confirm",
+    "delete": "Delete",
     "submit": "Submit",
     "loading": "Loading...",
     "success": "Operation successful"
@@ -389,7 +403,9 @@
     "roleViewer": "Viewer",
     "changeRole": "Change Role",
     "removeMember": "Remove from team",
-    "removeConfirm": "Are you sure you want to remove this member?",
+    "removeDialogTitle": "Remove member",
+    "removeConfirm": "Are you sure you want to remove this member? They will lose access to this workspace.",
+    "removeConfirmAction": "Remove",
     "removeSuccess": "Member removed successfully.",
     "roleUpdateSuccess": "Role updated successfully.",
     "noMembersFound": "No members found in this organization.",
@@ -398,7 +414,9 @@
     "pendingTitle": "Pending invitations",
     "pendingDescription": "People invited who have not joined yet.",
     "revokeInvite": "Revoke",
-    "revokeConfirm": "Revoke this invitation?",
+    "revokeDialogTitle": "Revoke invitation",
+    "revokeConfirm": "Revoke this invitation? The recipient will no longer be able to join with this link.",
+    "revokeConfirmAction": "Revoke",
     "noPendingInvites": "No pending invitations.",
     "tabMembers": "Members",
     "tabInvitations": "Invitations",
@@ -424,7 +442,8 @@
     "tableActions": "Actions",
     "searchPlaceholder": "Search roles...",
     "noRolesFound": "No roles found.",
-    "deleteConfirm": "Delete the role \"{name}\"?"
+    "deleteDialogTitle": "Delete role",
+    "deleteConfirm": "Delete the role \"{name}\"? It will be hidden; the change is recorded in audit."
   },
   "Invitations": {
     "inviteMember": "Invite Member",

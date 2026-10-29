@@ -41,7 +41,7 @@ export function ModalWrapper({
 }: ModalWrapperProps) {
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className={cn(sizeClasses[size], className)}>
+      <DialogContent className={cn(sizeClasses[size], "shadow-xl", className)}>
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
           {description && <DialogDescription>{description}</DialogDescription>}

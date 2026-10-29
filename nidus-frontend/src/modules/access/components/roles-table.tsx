@@ -13,6 +13,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/shared/ui/dropdown-menu";
+import { ConfirmDialog } from "@/shared/components/layout/confirm-dialog";
 import { DataTable, ColumnDef } from "@/shared/components/layout/data-table";
 import { CanAccess } from "@/modules/access/components/can-access";
 import { NidusScope } from "@/shared/access/scopes";
@@ -33,6 +34,9 @@ export function RolesTable({ roles, scopes }: RolesTableProps) {
   const [selectedRole, setSelectedRole] = React.useState<RoleResponse | null>(
     null,
   );
+  const [deleteTarget, setDeleteTarget] = React.useState<RoleResponse | null>(
+    null,
+  );
 
   const openCreate = () => {
     setSelectedRole(null);
@@ -44,15 +48,15 @@ export function RolesTable({ roles, scopes }: RolesTableProps) {
     setDialogOpen(true);
   };
 
-  const handleDelete = async (role: RoleResponse) => {
-    if (!confirm(t("deleteConfirm", { name: role.name }))) return;
-
-    const result = await deleteRoleAction(role.id);
+  const handleDelete = async () => {
+    if (!deleteTarget) return;
+    const result = await deleteRoleAction(deleteTarget.id);
     if (result.status === "success") {
       toast.success(result.message);
     } else {
       toast.error(result.message);
     }
+    setDeleteTarget(null);
   };
 
   const columns: ColumnDef<RoleResponse>[] = [
@@ -110,7 +114,7 @@ export function RolesTable({ roles, scopes }: RolesTableProps) {
                 </DropdownMenuItem>
                 <DropdownMenuItem
                   className="text-destructive focus:text-destructive"
-                  onClick={() => handleDelete(role)}
+                  onClick={() => setDeleteTarget(role)}
                 >
                   <Trash2 className="mr-2 h-4 w-4" />
                   {t("deleteRole")}
@@ -149,6 +153,18 @@ export function RolesTable({ roles, scopes }: RolesTableProps) {
         onClose={setDialogOpen}
         scopes={scopes}
         role={selectedRole}
+      />
+
+      <ConfirmDialog
+        open={deleteTarget !== null}
+        onOpenChange={(open) => {
+          if (!open) setDeleteTarget(null);
+        }}
+        title={t("deleteDialogTitle")}
+        description={t("deleteConfirm", { name: deleteTarget?.name ?? "" })}
+        confirmLabel={t("deleteRole")}
+        variant="destructive"
+        onConfirm={handleDelete}
       />
     </>
   );

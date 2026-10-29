@@ -26,7 +26,9 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/shared/ui/dropdown-menu";
+import { ConfirmDialog } from "@/shared/components/layout/confirm-dialog";
 import { DataTable, ColumnDef } from "@/shared/components/layout/data-table";
+import { PromptDialog } from "@/shared/components/layout/prompt-dialog";
 import { CanAccess } from "@/modules/access/components/can-access";
 import { NidusScope } from "@/shared/access/scopes";
 import { formatMoney } from "../lib/format";
@@ -72,6 +74,14 @@ export function InvoicesTable({
   const [emailDeliveries, setEmailDeliveries] = React.useState<InvoiceEmailDelivery[]>(
     [],
   );
+  const [confirmTarget, setConfirmTarget] = React.useState<{
+    kind: "delete" | "void";
+    row: InvoiceListItem;
+  } | null>(null);
+  const [promptTarget, setPromptTarget] = React.useState<{
+    kind: "email" | "payment";
+    row: InvoiceListItem;
+  } | null>(null);
 
   const replaceQuery = (mutate: (params: URLSearchParams) => void) => {
     const params = new URLSearchParams(searchParams.toString());
@@ -118,33 +128,8 @@ export function InvoicesTable({
     setDialogOpen(true);
   };
 
-  const handleDelete = async (row: InvoiceListItem) => {
-    if (!confirm(t("deleteConfirm"))) return;
-    const result = await deleteInvoiceAction(row.id);
-    if (result.status === "success") toast.success(result.message);
-    else toast.error(result.message);
-  };
-
   const handleIssue = async (row: InvoiceListItem) => {
     const result = await issueInvoiceAction(row.id);
-    if (result.status === "success") toast.success(result.message);
-    else toast.error(result.message);
-  };
-
-  const handleVoid = async (row: InvoiceListItem) => {
-    if (!confirm(t("voidConfirm"))) return;
-    const result = await voidInvoiceAction(row.id);
-    if (result.status === "success") toast.success(result.message);
-    else toast.error(result.message);
-  };
-
-  const handlePayment = async (row: InvoiceListItem) => {
-    const raw = window.prompt(t("paymentPrompt", { balance: row.balance_due }), row.balance_due);
-    if (!raw) return;
-    const result = await createInvoicePaymentAction(row.id, {
-      amount: raw.trim(),
-      method: "transfer",
-    });
     if (result.status === "success") toast.success(result.message);
     else toast.error(result.message);
   };
@@ -162,14 +147,40 @@ export function InvoicesTable({
     window.open(url, "_blank", "noopener,noreferrer");
   };
 
-  const handleSendEmail = async (row: InvoiceListItem) => {
-    const override = window.prompt(t("emailPrompt"), "");
-    if (override === null) return;
-    const result = await sendInvoiceEmailAction(row.id, {
-      to_email: override.trim() || null,
-    });
+  const runConfirm = async () => {
+    if (!confirmTarget) return;
+    const { kind, row } = confirmTarget;
+    const result =
+      kind === "delete"
+        ? await deleteInvoiceAction(row.id)
+        : await voidInvoiceAction(row.id);
     if (result.status === "success") toast.success(result.message);
     else toast.error(result.message);
+    setConfirmTarget(null);
+  };
+
+  const runPrompt = async (value: string) => {
+    if (!promptTarget) return;
+    const { kind, row } = promptTarget;
+    if (kind === "email") {
+      const result = await sendInvoiceEmailAction(row.id, {
+        to_email: value.trim() || null,
+      });
+      if (result.status === "success") {
+        toast.success(result.message);
+        if (detailOpen && selected?.id === row.id) {
+          setEmailDeliveries(await getInvoiceEmailsAction(row.id));
+        }
+      } else toast.error(result.message);
+    } else {
+      const result = await createInvoicePaymentAction(row.id, {
+        amount: value.trim(),
+        method: "transfer",
+      });
+      if (result.status === "success") toast.success(result.message);
+      else toast.error(result.message);
+    }
+    setPromptTarget(null);
   };
 
   const statusVariant = (status: string) => {
@@ -253,7 +264,7 @@ export function InvoicesTable({
                     </DropdownMenuItem>
                     <DropdownMenuItem
                       className="text-destructive focus:text-destructive"
-                      onClick={() => void handleDelete(row)}
+                      onClick={() => setConfirmTarget({ kind: "delete", row })}
                     >
                       <Trash2 className="size-4" />
                       {t("deleteAction")}
@@ -263,21 +274,25 @@ export function InvoicesTable({
                 {(row.status === "issued" ||
                   row.status === "partial" ||
                   row.status === "paid") && (
-                  <DropdownMenuItem onClick={() => void handleSendEmail(row)}>
+                  <DropdownMenuItem
+                    onClick={() => setPromptTarget({ kind: "email", row })}
+                  >
                     <Mail className="size-4" />
                     {t("emailAction")}
                   </DropdownMenuItem>
                 )}
                 {(row.status === "issued" || row.status === "partial") && (
                   <>
-                    <DropdownMenuItem onClick={() => void handlePayment(row)}>
+                    <DropdownMenuItem
+                      onClick={() => setPromptTarget({ kind: "payment", row })}
+                    >
                       <Banknote className="size-4" />
                       {t("paymentAction")}
                     </DropdownMenuItem>
                     {Number(row.amount_paid) === 0 && (
                       <DropdownMenuItem
                         className="text-destructive focus:text-destructive"
-                        onClick={() => void handleVoid(row)}
+                        onClick={() => setConfirmTarget({ kind: "void", row })}
                       >
                         <Ban className="size-4" />
                         {t("voidAction")}
@@ -348,7 +363,11 @@ export function InvoicesTable({
           (selected.status === "issued" ||
             selected.status === "partial" ||
             selected.status === "paid")
-            ? () => void handleSendEmail(selected)
+            ? () =>
+                setPromptTarget({
+                  kind: "email",
+                  row: selected,
+                })
             : undefined
         }
       />
@@ -360,6 +379,61 @@ export function InvoicesTable({
         customers={customers}
         onCreate={createInvoiceAction}
         onUpdate={updateInvoiceAction}
+      />
+
+      <ConfirmDialog
+        open={confirmTarget !== null}
+        onOpenChange={(open) => {
+          if (!open) setConfirmTarget(null);
+        }}
+        title={
+          confirmTarget?.kind === "void"
+            ? t("voidDialogTitle")
+            : t("deleteDialogTitle")
+        }
+        description={
+          confirmTarget?.kind === "void" ? t("voidConfirm") : t("deleteConfirm")
+        }
+        confirmLabel={
+          confirmTarget?.kind === "void"
+            ? t("voidConfirmAction")
+            : t("deleteAction")
+        }
+        variant="destructive"
+        onConfirm={runConfirm}
+      />
+
+      <PromptDialog
+        open={promptTarget !== null}
+        onOpenChange={(open) => {
+          if (!open) setPromptTarget(null);
+        }}
+        title={
+          promptTarget?.kind === "payment"
+            ? t("paymentDialogTitle")
+            : t("emailDialogTitle")
+        }
+        description={
+          promptTarget?.kind === "payment"
+            ? t("paymentDialogDescription", {
+                balance: promptTarget.row.balance_due,
+              })
+            : t("emailDialogDescription")
+        }
+        label={
+          promptTarget?.kind === "payment" ? t("paymentLabel") : t("emailLabel")
+        }
+        defaultValue={
+          promptTarget?.kind === "payment" ? promptTarget.row.balance_due : ""
+        }
+        inputType={promptTarget?.kind === "payment" ? "text" : "email"}
+        allowEmpty={promptTarget?.kind === "email"}
+        confirmLabel={
+          promptTarget?.kind === "payment"
+            ? t("paymentConfirm")
+            : t("emailSend")
+        }
+        onConfirm={runPrompt}
       />
     </div>
   );

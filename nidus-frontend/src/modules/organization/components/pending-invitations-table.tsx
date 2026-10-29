@@ -7,6 +7,7 @@ import { MailX } from "lucide-react";
 
 import { Button } from "@/shared/ui/button";
 import { Badge } from "@/shared/ui/badge";
+import { ConfirmDialog } from "@/shared/components/layout/confirm-dialog";
 import { DataTable, ColumnDef } from "@/shared/components/layout/data-table";
 import { CanAccess } from "@/modules/access/components/can-access";
 import { NidusScope } from "@/shared/access/scopes";
@@ -22,16 +23,19 @@ export function PendingInvitationsTable({
   invitations,
 }: PendingInvitationsTableProps) {
   const t = useTranslations("SettingsMembers");
+  const [revokeTargetId, setRevokeTargetId] = React.useState<string | null>(
+    null,
+  );
 
-  const handleRevoke = async (invitationId: string) => {
-    if (!confirm(t("revokeConfirm"))) return;
-
-    const result = await revokeInvitationAction(invitationId);
+  const handleRevoke = async () => {
+    if (!revokeTargetId) return;
+    const result = await revokeInvitationAction(revokeTargetId);
     if (result.status === "success") {
       toast.success(result.message);
     } else {
       toast.error(result.message);
     }
+    setRevokeTargetId(null);
   };
 
   const columns: ColumnDef<InvitationResponse>[] = [
@@ -71,7 +75,7 @@ export function PendingInvitationsTable({
             variant="ghost"
             size="sm"
             className="text-destructive hover:text-destructive"
-            onClick={() => handleRevoke(invitation.id)}
+            onClick={() => setRevokeTargetId(invitation.id)}
           >
             <MailX className="mr-2 h-4 w-4" />
             {t("revokeInvite")}
@@ -99,6 +103,18 @@ export function PendingInvitationsTable({
         searchPlaceholder={t("searchPlaceholder")}
         emptyMessage={t("noPendingInvites")}
         pageSize={5}
+      />
+
+      <ConfirmDialog
+        open={revokeTargetId !== null}
+        onOpenChange={(open) => {
+          if (!open) setRevokeTargetId(null);
+        }}
+        title={t("revokeDialogTitle")}
+        description={t("revokeConfirm")}
+        confirmLabel={t("revokeConfirmAction")}
+        variant="destructive"
+        onConfirm={handleRevoke}
       />
     </div>
   );

@@ -7,7 +7,6 @@ import aiosmtplib
 from app.core.config import settings
 from app.core.i18n.service import i18n
 
-# (filename, content_bytes, mime_main, mime_sub) e.g. ("a.pdf", b"...", "application", "pdf")
 Attachment = tuple[str, bytes, str, str]
 
 
@@ -20,10 +19,6 @@ class EmailService:
         html_content: str,
         attachments: Optional[Sequence[Attachment]] = None,
     ) -> str:
-        """
-        Send via SMTP. Returns "mocked" when SMTP creds are empty (local/dev),
-        otherwise "sent". Raises on real SMTP failure.
-        """
         if not settings.SMTP_USER or not settings.SMTP_PASSWORD:
             print("\n" + "=" * 60)
             print(f" MOCK EMAIL DISPATCHED TO : {to_email}")
