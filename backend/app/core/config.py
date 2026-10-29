@@ -51,6 +51,8 @@ class Settings(BaseSettings):
     EMAIL_FROM_NAME: str = "Nidus Billing"
     EMAIL_FROM_ADDRESS: str = "noreply@niduslabs.com"
 
+    CREDENTIALS_ENCRYPTION_KEY: str = ""
+
     @computed_field
     @property
     def DATABASE_URL(self) -> str:

@@ -1,6 +1,10 @@
 from .audit.audit_log import AuditLog as AuditLog
 from .billing.customer import Customer as Customer
 from .billing.document_series import DocumentSeries as DocumentSeries
+from .billing.fiscal_profile import OrganizationFiscalProfile as OrganizationFiscalProfile
+from .billing.hacienda_credential import (
+    OrganizationHaciendaCredential as OrganizationHaciendaCredential,
+)
 from .billing.invoice import Invoice as Invoice
 from .billing.invoice import InvoiceLine as InvoiceLine
 from .billing.invoice_email import InvoiceEmailDelivery as InvoiceEmailDelivery

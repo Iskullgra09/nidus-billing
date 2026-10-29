@@ -71,6 +71,14 @@ export const SHELL_NAV_GROUPS: ShellNavGroup[] = [
         showInSidebar: false,
       },
       {
+        id: "fiscal",
+        href: "/settings/organization/fiscal",
+        icon: Building2,
+        scope: NidusScope.FISCAL_WRITE,
+        keywords: "fiscal hacienda cedula tributaria credentials",
+        showInSidebar: false,
+      },
+      {
         id: "members",
         href: "/settings/organization/members",
         icon: Users,

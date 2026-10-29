@@ -90,6 +90,8 @@ CUSTOM_ROLE = {
         NidusScope.ITEM_WRITE.value,
         NidusScope.INVOICE_READ.value,
         NidusScope.INVOICE_WRITE.value,
+        NidusScope.FISCAL_READ.value,
+        NidusScope.FISCAL_WRITE.value,
     ],
 }
 

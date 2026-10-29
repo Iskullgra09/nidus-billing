@@ -1,5 +1,7 @@
 from app.models.billing.customer import Customer
 from app.models.billing.document_series import DocumentSeries
+from app.models.billing.fiscal_profile import OrganizationFiscalProfile
+from app.models.billing.hacienda_credential import OrganizationHaciendaCredential
 from app.models.billing.invoice import Invoice, InvoiceLine
 from app.models.billing.invoice_email import InvoiceEmailDelivery
 from app.models.billing.item import Item
@@ -14,5 +16,7 @@ __all__ = [
     "InvoiceLine",
     "InvoicePayment",
     "Item",
+    "OrganizationFiscalProfile",
+    "OrganizationHaciendaCredential",
     "Supplier",
 ]

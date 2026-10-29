@@ -1267,3 +1267,24 @@ Issued invoices need a first outbound channel before Hacienda. SMTP and mock-dis
 ### Consequences
 * **Positive:** Auditable resend history; local dev works without SMTP.
 * **Negative:** Mocked sends are not real delivery — operators must configure SMTP for production.
+
+---
+
+## ADR B-007: Org Fiscal Profile & Hacienda Credentials (Phase B5)
+
+**Date:** 2026-10-29
+**Status:** Accepted
+
+### Context
+B6 needs issuer identity and signing material before live Hacienda calls. Operational billing (B1–B4) must not store secrets in `organization.settings` JSON or audit payloads.
+
+### Decision
+1. **Typed tables** (RLS): `organization_fiscal_profile` (1:1 org) and `organization_hacienda_credential` (1:1 org).
+2. **Encrypt at rest** with Fernet (`CREDENTIALS_ENCRYPTION_KEY`, or SHA-256 of `SECRET_KEY` in local/dev only). Never return ciphertext to the client.
+3. **API:** `GET/PUT /billing/fiscal-profile`; `GET/PUT/DELETE /billing/hacienda-credentials` (multipart for `.p12`). Status response only exposes booleans + non-secret metadata.
+4. **Scopes:** `billing:fiscal:read` / `billing:fiscal:write` (Admin/Owner). Audit actions without secret values.
+5. **Out of scope:** live Hacienda submit/verify (B6); FX / multi-currency engine (backlog).
+
+### Consequences
+* **Positive:** Clear path for B6 signing; secrets isolated from org settings JSON.
+* **Negative:** Existing Admin roles need `billing:fiscal:*` (seeded for new orgs; existing DBs may need role scope refresh).

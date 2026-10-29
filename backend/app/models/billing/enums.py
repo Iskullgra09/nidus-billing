@@ -29,3 +29,16 @@ class InvoiceEmailStatus(StrEnum):
     SENT = "sent"
     FAILED = "failed"
     MOCKED = "mocked"
+
+
+class IdentificationType(StrEnum):
+    FISICA = "fisica"
+    JURIDICA = "juridica"
+    DIMEX = "dimex"
+    NITE = "nite"
+    EXTRANJERO = "extranjero"
+
+
+class HaciendaEnvironment(StrEnum):
+    SANDBOX = "sandbox"
+    PRODUCTION = "production"
