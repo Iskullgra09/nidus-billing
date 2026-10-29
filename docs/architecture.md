@@ -1288,3 +1288,51 @@ B6 needs issuer identity and signing material before live Hacienda calls. Operat
 ### Consequences
 * **Positive:** Clear path for B6 signing; secrets isolated from org settings JSON.
 * **Negative:** Existing Admin roles need `billing:fiscal:*` (seeded for new orgs; existing DBs may need role scope refresh).
+
+---
+
+## ADR B-008: Dual Operational + Fiscal Lifecycle (Phase B6)
+
+**Date:** 2026-10-29
+**Status:** Accepted
+
+### Context
+Costa Rica electronic invoicing (MH) requires FE XML 4.4, a 50-digit `clave`, XAdES-EPES signing, and OAuth submit/verify against recepcion (sandbox/prod). Operational AR states (`draft` / `issued` / `partial` / `paid` / `void`) must stay separate from Hacienda aceptada/rechazada.
+
+### Decision
+1. **Parallel record:** `invoice_fiscal` (1:1 with `invoice`) stores clave, consecutive, XML, MH status, and response metadata. Operational `invoice.status` is unchanged by emit/verify.
+2. **XML 4.4:** Build `FacturaElectronica` against `cdn.comprobanteselectronicos.go.cr/xml-schemas/v4.4/facturaElectronica`. Currency whitelist **CRC | USD** (no FX). Line `tax_code` / CABYS required for MH; `%` still drives operational totals.
+3. **Emit path:** Allocate FE series → clave → unsigned XML → sign → submit. `HACIENDA_LIVE=false` (default) uses mock sign + mock MH client. Live gated by flag + org credentials (ATV pin as IdP password, OAuth client, `.p12` for future signer).
+4. **API:** `GET .../fiscal`, `POST .../emit-hacienda`, `POST .../verify-hacienda` under `invoice:read` / `invoice:write`. Re-emit allowed after `rejected` / `error`.
+5. **Out of scope:** live XAdES-EPES (stub until signer lands); NC/ND workflows beyond schema readiness; supplier reception (B7); BCCR FX (B10).
+
+### Consequences
+* **Positive:** Tenants can exercise emit/verify locally without MH; fiscal identity is auditable beside AR.
+* **Negative:** Mock acceptance ≠ legal validity; production needs real signer + `HACIENDA_LIVE` + credentials.
+
+---
+
+## ADR B-009: MH Test Ladder & B6.1 Outbound Close-Out
+
+**Date:** 2026-10-29
+**Status:** Accepted
+
+### Context
+B6 ships mock emit/verify so day-to-day development never depends on Ministerio de Hacienda. Closing a trustworthy outbound path needs a real XAdES signer, a safe sandbox practice, USD rate on FE XML, and usable CABYS on lines — without pulling in supplier inbox (B7), email ingest (B8), or full FX (B10).
+
+### Decision
+1. **Three environments**
+   - **Local mock** (`HACIENDA_LIVE=false`): default. Builds clave/XML, mock sign, mock submit/verify. No MH network calls.
+   - **MH sandbox:** org uses ATV **test** credentials + test `.p12`; `HACIENDA_LIVE=true` only against recepcion-sandbox. Emitter/receptor identities are the developer’s or the org’s test juridica — never invent third-party legal invoices.
+   - **Production MH:** real org fiscal profile, real credentials, real signer. Only after sandbox confidence.
+2. **B6.1 scope (same product line, new branch after B6 merge):** XAdES-EPES with stored `.p12`; document `exchange_rate` when `currency=USD` for XML; CABYS mínimo in UI (line + optional item default). Keep mock as default for CI/dev.
+3. **Explicit deferrals**
+   - BCCR auto rates + multi-currency AR reports → **B10**.
+   - Supplier accept/reject → **B7**.
+   - Inbound mailbox → **B8**.
+   - Rich CABYS catalog sync / NC-ND emit → later (document in roadmap; not B7).
+4. **Legal validity:** mock or unsigned live must never be marketed as “aceptada ante Hacienda”. UI already surfaces `mock_mode`.
+
+### Consequences
+* **Positive:** Clear safe testing story; B6 can merge while B6.1 finishes outbound.
+* **Negative:** Until B6.1, USD FE XML may omit `TipoCambio` and CABYS may be empty unless set via API.

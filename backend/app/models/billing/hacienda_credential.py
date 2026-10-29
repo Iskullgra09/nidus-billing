@@ -8,8 +8,6 @@ from app.models.billing.enums import HaciendaEnvironment
 
 
 class OrganizationHaciendaCredential(UUIDMixin, TimestampMixin, TenantMixin, table=True):
-    """Encrypted Hacienda signing/API secrets. Never return ciphertext to clients."""
-
     __tablename__ = "organization_hacienda_credential"
 
     environment: str = Field(

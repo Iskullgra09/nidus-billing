@@ -50,7 +50,8 @@ Phases are **product slices**, not Core’s old Phase 1–16 list. Status update
 | **B3** | Numbering, payments & balances | Done |
 | **B4** | Outbound email (send invoice) | Done |
 | **B5** | Org fiscal profile & Hacienda credentials | Done |
-| **B6** | Hacienda outbound (emit + verify), CRC/USD whitelist, tax codes for XML | In progress |
+| **B6** | Hacienda outbound (emit + verify), CRC/USD whitelist, tax codes for XML | Done (mock emit; live XAdES gated) |
+| **B6.1** | XAdES signer + sandbox live path; USD rate on FE; CABYS UI mínimo | Next |
 | **B7** | Hacienda inbound (receive / accept-reject) | Planned |
 | **B8** | Inbound email mailbox (load supplier invoices) | Planned |
 | **B9** | Hardening, UX polish, quotes→invoice, domain tests | Planned |
@@ -58,13 +59,13 @@ Phases are **product slices**, not Core’s old Phase 1–16 list. Status update
 | **B11** | Party enrichment (multi contact / address) | Planned |
 
 ```text
-B0 → B1 → B2 → B3 → B4 → B5 → B6 → B7 → B8 → B9
-                                              ↘→ B10 FX
-                                              ↘→ B11 parties
+B0 → B1 → B2 → B3 → B4 → B5 → B6 → B6.1 → B7 → B8 → B9
+                                                    ↘→ B10 FX (BCCR / reports)
+                                                    ↘→ B11 parties
 Add-ons (post-core): AP/OC, inventory, payroll, subscriptions, treasury
 ```
 
-Operational billing (B1–B4) ships value before fiscal/Hacienda. B5 stores issuer identity and encrypted credentials. B6–B8 are the Hacienda critical path. B9–B11 harden product quality after emit/receive work.
+Operational billing (B1–B4) ships value before fiscal/Hacienda. B5 stores issuer identity and encrypted credentials. B6–B8 are the Hacienda critical path (B6.1 closes outbound before inbound). B9–B11 harden product quality after emit/receive work.
 
 ### B0 — Brand & side-by-side runtime
 
@@ -106,12 +107,23 @@ Operational billing (B1–B4) ships value before fiscal/Hacienda. B5 stores issu
 
 ### B6 — Hacienda outbound (emit + verify)
 
-**Backend:** `invoice_fiscal` beside the operational invoice; build XML 4.4; sign with stored credentials; submit sandbox → prod; persist **clave numérica**, submission id, Hacienda response; status sync (aceptada / rechazada / procesando); **verify** action; credit/debit notes (NC/ND) for corrections.  
-**Currency:** whitelist **CRC | USD** on invoices (no automatic conversion / FX).  
-**Tax:** line tax codes needed for XML (beyond a single optional `%` where MH requires codes).  
-**Frontend:** emit flow, Hacienda status badge, verify/detail panel, currency selector, error surfacing.  
-**ADR:** B-008 when this slice lands (dual operational + fiscal status).  
-**Out of scope:** supplier reception (B7); BCCR FX (B10).
+**Backend:** `invoice_fiscal` beside the operational invoice; FE XML **4.4**; mock XAdES + mock MH client when `HACIENDA_LIVE=false`; persist **clave** (50 digits), consecutive, XML, MH status; **verify** polls/mock-accepts. Live submit gated by flag + B5 credentials (ATV pin → IdP password).  
+**Currency:** whitelist **CRC | USD** (no FX engine yet).  
+**Tax:** line `tax_code` (+ `cabys_code` column) for XML; `%` still for operational totals.  
+**Frontend:** emit/verify actions, Hacienda badge + detail panel, currency selector.  
+**ADR:** B-008 (dual operational + fiscal status); B-009 (test ladder + B6.1 scope).  
+**Done when:** mock emit/verify end-to-end; clave persisted; UI surfaces fiscal status.  
+**Not done here:** real XAdES, sandbox MH calls, USD `TipoCambio` on FE, CABYS picker UI.
+
+### B6.1 — Close outbound (signer, sandbox, USD rate, CABYS mínimo)
+
+**Goal:** safe path to real MH **sandbox** without jumping to B7/B8 or full B10.
+
+1. **XAdES-EPES** signer using org `.p12` (no mock marker when live).
+2. **Test ladder:** local mock (default) → MH sandbox with ATV test credentials → production only with real org + `HACIENDA_LIVE`.
+3. **USD on FE:** `exchange_rate` (+ rate date) on the invoice when `currency=USD` for XML `TipoCambio`; manual or simple fetch — **not** BCCR history/reports (those stay **B10**).
+4. **CABYS mínimo:** require/select `cabys_code` on lines (and optional default on items) so emit is MH-ready; rich CABYS catalog sync can wait (B9 / later note).
+5. **Out of scope:** supplier reception (**B7**), inbound mailbox (**B8**), NC/ND full flows, BCCR multi-currency AR (**B10**).
 
 ### B7 — Hacienda inbound (receive / accept-reject)
 
@@ -137,7 +149,7 @@ Operational billing (B1–B4) ships value before fiscal/Hacienda. B5 stores issu
 
 **Backend:** BCCR (or configured) rates, rate date on documents, conversion helpers; multi-currency AR reporting.  
 **Frontend:** rate display, reports that mix CRC and USD without lying about balances.  
-**Out of scope:** inventing FX inside B6 — B6 only whitelists CRC|USD with no auto-conversion.
+**Boundary:** B6.1 may store a **document** exchange rate for FE XML when USD; B10 owns automatic BCCR sync and reporting that mixes CRC/USD without lying about balances.
 
 ### B11 — Party enrichment
 
@@ -187,12 +199,14 @@ These are **commercial / AR** states on `invoice.status`. They are **not** Hacie
 
 ### Backlog notes (not yet a numbered phase)
 
-Promoted into the table above: CRC|USD + tax codes for XML → **B6**; FX → **B10**; party multi-contact → **B11**; richer invoice UX / quotes→invoice / in-app guidance → **B9**; dual operational+fiscal status → **B6** (ADR B-008).
+Promoted: CRC|USD + tax codes → **B6**; dual operational+fiscal → **B6** (ADR B-008); XAdES + sandbox + USD rate on FE + CABYS UI mínimo → **B6.1** (ADR B-009); BCCR FX/reports → **B10**; party multi-contact → **B11**; richer invoice UX / quotes→invoice → **B9**.
 
 Still parked (no phase yet):
 
 - **Accounting ledger / journal:** explicit non-goal until add-ons; balances stay AR cash application (B3).
 - **Import sales drafts from XML/file:** prefer aligning with B6/B8 parsers rather than a one-off upload helper.
+- **Rich CABYS catalog sync** (search/sync MH codes beyond line field + item default): after B6.1 mínimo; not B7.
+- **NC/ND emit workflows:** after outbound FE is solid (post B6.1).
 
 ---
 

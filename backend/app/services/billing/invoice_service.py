@@ -11,7 +11,12 @@ from app.core.pagination import paginate_with_cursor
 from app.models.audit import AuditAction, AuditResourceType
 from app.models.billing.customer import Customer
 from app.models.billing.document_series import DocumentSeries
-from app.models.billing.enums import DocumentSeriesType, InvoiceStatus, PaymentCondition
+from app.models.billing.enums import (
+    DocumentSeriesType,
+    InvoiceStatus,
+    PaymentCondition,
+    tax_rate_to_mh_code,
+)
 from app.models.billing.invoice import Invoice, InvoiceLine
 from app.models.billing.item import Item
 from app.models.billing.payment import InvoicePayment
@@ -244,6 +249,10 @@ class InvoiceService:
                     tax_rate = item.tax_rate
 
             line_subtotal, line_tax, line_total = InvoiceService._line_amounts(quantity, unit_price, tax_rate)
+            tax_code = (raw.tax_code or tax_rate_to_mh_code(
+                float(tax_rate) if tax_rate is not None else None
+            )).zfill(2)[:2]
+            cabys_code = raw.cabys_code.strip() if raw.cabys_code else None
             built.append(
                 InvoiceLine(
                     organization_id=org_id,
@@ -256,6 +265,8 @@ class InvoiceService:
                     quantity=quantity,
                     unit_price=unit_price,
                     tax_rate=tax_rate,
+                    tax_code=tax_code,
+                    cabys_code=cabys_code,
                     line_subtotal=line_subtotal,
                     line_tax=line_tax,
                     line_total=line_total,
@@ -330,7 +341,7 @@ class InvoiceService:
             customer_id=customer.id,
             payment_condition=data.payment_condition.value,
             status=InvoiceStatus.DRAFT.value,
-            currency=data.currency.upper(),
+            currency=data.currency.value,
             reference_number=data.reference_number.strip() if data.reference_number else None,
             notes=data.notes,
             due_date=data.due_date,
@@ -387,7 +398,8 @@ class InvoiceService:
             invoice.reference_number = ref.strip() if ref else None
             del payload["reference_number"]
         if "currency" in payload and payload["currency"] is not None:
-            invoice.currency = payload["currency"].upper()
+            currency = payload["currency"]
+            invoice.currency = currency.value if hasattr(currency, "value") else str(currency).upper()
             del payload["currency"]
         for key, value in payload.items():
             if key == "lines":

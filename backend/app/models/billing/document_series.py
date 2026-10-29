@@ -25,7 +25,7 @@ class DocumentSeries(UUIDMixin, TimestampMixin, TenantMixin, table=True):
             unique=True,
         ),
         sa.CheckConstraint(
-            "doc_type IN ('invoice')",
+            "doc_type IN ('invoice', 'fe')",
             name="ck_document_series_doc_type",
         ),
         sa.CheckConstraint("next_number >= 1", name="ck_document_series_next_number"),

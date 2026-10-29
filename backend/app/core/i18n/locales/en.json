@@ -64,7 +64,10 @@
         "fiscal_profile_updated": "Fiscal profile saved successfully.",
         "hacienda_credentials_retrieved": "Hacienda credential status retrieved successfully.",
         "hacienda_credentials_updated": "Hacienda credentials saved successfully.",
-        "hacienda_credentials_deleted": "Hacienda credentials removed successfully."
+        "hacienda_credentials_deleted": "Hacienda credentials removed successfully.",
+        "invoice_fiscal_retrieved": "Hacienda fiscal status retrieved successfully.",
+        "invoice_fiscal_emitted": "Invoice submitted to Hacienda successfully.",
+        "invoice_fiscal_verified": "Hacienda status refreshed successfully."
     },
     "billing": {
         "customer_tax_id_conflict": "A customer with tax id '{tax_id}' already exists in this organization.",
@@ -72,6 +75,13 @@
         "item_sku_conflict": "An item with SKU '{sku}' already exists in this organization.",
         "invoice_not_draft": "Only draft invoices can be modified or deleted.",
         "invoice_not_issued": "Only issued or partially paid invoices can be voided.",
+        "invoice_must_be_issued": "Issue the invoice before emitting to Hacienda.",
+        "invoice_void": "Void invoices cannot be emitted to Hacienda.",
+        "invoice_already_emitted": "This invoice already has an active Hacienda submission.",
+        "fiscal_profile_required": "Configure the organization fiscal profile before emitting.",
+        "customer_tax_id_required": "Customer tax id is required to emit to Hacienda.",
+        "invoice_lines_required": "Invoice lines are required to build the Hacienda XML.",
+        "fiscal_clave_required": "Emit the invoice before verifying Hacienda status.",
         "invoice_no_lines": "Add at least one line before issuing the invoice.",
         "invoice_due_date_required": "A due date is required when issuing a credit (crédito) invoice.",
         "invoice_has_payments": "Void is blocked while the invoice has recorded payments.",

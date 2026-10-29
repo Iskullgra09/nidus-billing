@@ -35,6 +35,7 @@ const lineSchema = z.object({
 const invoiceSchema = z.object({
   customer_id: z.string().uuid(),
   payment_condition: z.enum(["contado", "credito"]),
+  currency: z.enum(["CRC", "USD"]),
   due_date: z.string().optional(),
   reference_number: z.string().optional(),
   notes: z.string().optional(),
@@ -78,6 +79,7 @@ export function InvoiceFormDialog({
     defaultValues: {
       customer_id: "",
       payment_condition: "contado",
+      currency: "CRC",
       due_date: "",
       reference_number: "",
       notes: "",
@@ -123,6 +125,7 @@ export function InvoiceFormDialog({
     form.reset({
       customer_id: invoice?.customer_id ?? customers[0]?.id ?? "",
       payment_condition: invoice?.payment_condition ?? "contado",
+      currency: (invoice?.currency as "CRC" | "USD") ?? "CRC",
       due_date: invoice?.due_date ?? "",
       reference_number: invoice?.reference_number ?? "",
       notes: invoice?.notes ?? "",
@@ -155,6 +158,7 @@ export function InvoiceFormDialog({
     const payload: InvoicePayload = {
       customer_id: values.customer_id,
       payment_condition: values.payment_condition,
+      currency: values.currency,
       due_date: values.due_date || null,
       reference_number: values.reference_number || null,
       notes: values.notes || null,
@@ -234,6 +238,25 @@ export function InvoiceFormDialog({
                         >
                           <option value="contado">{t("contado")}</option>
                           <option value="credito">{t("credito")}</option>
+                        </select>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="currency"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>{t("fieldCurrency")}</FormLabel>
+                      <FormControl>
+                        <select
+                          className="border-input bg-background h-9 w-full rounded-lg border px-2.5 text-sm"
+                          {...field}
+                        >
+                          <option value="CRC">CRC</option>
+                          <option value="USD">USD</option>
                         </select>
                       </FormControl>
                       <FormMessage />

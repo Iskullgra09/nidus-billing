@@ -9,6 +9,7 @@ import {
   CursorPage,
   Invoice,
   InvoiceEmailDelivery,
+  InvoiceFiscal,
   InvoiceListItem,
   InvoicePayload,
   InvoicePaymentPayload,
@@ -180,6 +181,77 @@ export async function voidInvoiceAction(id: string): Promise<ActionResponse> {
     return { status: "error", message: response.message || tCommon("unknownError") };
   } catch (error) {
     console.error("Void invoice error:", error);
+    return { status: "error", message: tCommon("connectionError") };
+  }
+}
+
+export async function emitInvoiceFiscalAction(id: string): Promise<ActionResponse> {
+  const tCommon = await getTranslations("Common");
+  try {
+    const session = (await cookies()).get("nidus_session")?.value;
+    if (!session) return { status: "error", message: tCommon("connectionError") };
+
+    const response = await fetchClient(`/billing/invoices/${id}/emit-hacienda`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${session}` },
+    });
+
+    if (response.status === "success") {
+      revalidatePath(PATH);
+      return { status: "success", message: response.message || tCommon("success") };
+    }
+    return { status: "error", message: response.message || tCommon("unknownError") };
+  } catch (error) {
+    console.error("Emit Hacienda error:", error);
+    return { status: "error", message: tCommon("connectionError") };
+  }
+}
+
+export async function verifyInvoiceFiscalAction(id: string): Promise<ActionResponse> {
+  const tCommon = await getTranslations("Common");
+  try {
+    const session = (await cookies()).get("nidus_session")?.value;
+    if (!session) return { status: "error", message: tCommon("connectionError") };
+
+    const response = await fetchClient(`/billing/invoices/${id}/verify-hacienda`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${session}` },
+    });
+
+    if (response.status === "success") {
+      revalidatePath(PATH);
+      return { status: "success", message: response.message || tCommon("success") };
+    }
+    return { status: "error", message: response.message || tCommon("unknownError") };
+  } catch (error) {
+    console.error("Verify Hacienda error:", error);
+    return { status: "error", message: tCommon("connectionError") };
+  }
+}
+
+export async function getInvoiceFiscalAction(
+  id: string,
+): Promise<ActionResponse & { data?: InvoiceFiscal }> {
+  const tCommon = await getTranslations("Common");
+  try {
+    const session = (await cookies()).get("nidus_session")?.value;
+    if (!session) return { status: "error", message: tCommon("connectionError") };
+
+    const response = await fetchClient<InvoiceFiscal>(
+      `/billing/invoices/${id}/fiscal`,
+      { headers: { Authorization: `Bearer ${session}` } },
+    );
+
+    if (response.status === "success") {
+      return {
+        status: "success",
+        message: response.message || tCommon("success"),
+        data: response.data ?? undefined,
+      };
+    }
+    return { status: "error", message: response.message || tCommon("unknownError") };
+  } catch (error) {
+    console.error("Get invoice fiscal error:", error);
     return { status: "error", message: tCommon("connectionError") };
   }
 }

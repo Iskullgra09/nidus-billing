@@ -3,6 +3,13 @@ import { PageInfo } from "./party";
 export type PaymentCondition = "contado" | "credito";
 export type InvoiceStatus = "draft" | "issued" | "partial" | "paid" | "void";
 export type PaymentMethod = "cash" | "transfer" | "card" | "other";
+export type InvoiceCurrency = "CRC" | "USD";
+export type HaciendaStatus =
+  | "pending"
+  | "submitted"
+  | "accepted"
+  | "rejected"
+  | "error";
 
 export interface InvoiceLine {
   id: string;
@@ -15,9 +22,30 @@ export interface InvoiceLine {
   quantity: string;
   unit_price: string;
   tax_rate: string | null;
+  tax_code: string | null;
+  cabys_code: string | null;
   line_subtotal: string;
   line_tax: string;
   line_total: string;
+}
+
+export interface InvoiceFiscal {
+  id: string;
+  organization_id: string;
+  invoice_id: string;
+  document_type: string;
+  status: HaciendaStatus | "processing";
+  clave: string | null;
+  consecutive: string | null;
+  supply_situation: string;
+  signed_at: string | null;
+  submitted_at: string | null;
+  mh_response_at: string | null;
+  mh_status_raw: string | null;
+  mh_message: string | null;
+  mock_mode: boolean;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface InvoicePayment {
@@ -96,6 +124,8 @@ export interface InvoiceLinePayload {
   quantity: string;
   unit_price: string;
   tax_rate?: string | null;
+  tax_code?: string | null;
+  cabys_code?: string | null;
 }
 
 export interface InvoicePayload {

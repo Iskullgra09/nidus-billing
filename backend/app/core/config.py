@@ -52,6 +52,7 @@ class Settings(BaseSettings):
     EMAIL_FROM_ADDRESS: str = "noreply@niduslabs.com"
 
     CREDENTIALS_ENCRYPTION_KEY: str = ""
+    HACIENDA_LIVE: bool = False
 
     @computed_field
     @property
