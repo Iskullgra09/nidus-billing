@@ -86,7 +86,7 @@ export function GeneralSettingsForm({ user }: GeneralSettingsFormProps) {
     : user.email.substring(0, 2).toUpperCase();
 
   return (
-    <div className="space-y-6">
+    <div className="max-w-2xl space-y-6">
       <div>
         <h3 className="text-lg font-medium">{tSet("title")}</h3>
         <p className="text-sm text-muted-foreground">{tSet("description")}</p>
@@ -113,7 +113,7 @@ export function GeneralSettingsForm({ user }: GeneralSettingsFormProps) {
       <Form {...form}>
         <form
           onSubmit={form.handleSubmit(onSubmit)}
-          className="space-y-5 max-w-md"
+          className="space-y-5"
         >
           <FormItem>
             <FormLabel>{tSet("emailAddress")}</FormLabel>

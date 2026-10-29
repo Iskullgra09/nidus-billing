@@ -310,15 +310,6 @@ export function InvoicesTable({
 
   return (
     <div className="space-y-4">
-      <div className="flex justify-end">
-        <CanAccess scope={NidusScope.INVOICE_WRITE}>
-          <Button type="button" onClick={openCreate}>
-            <Plus className="size-4" />
-            {t("createButton")}
-          </Button>
-        </CanAccess>
-      </div>
-
       <DataTable
         mode="cursor"
         columns={columns}
@@ -330,6 +321,14 @@ export function InvoicesTable({
         isFirstPage={!searchParams.get("cursor")}
         initialSearch={searchQuery}
         onRowClick={(row) => void openView(row)}
+        toolbarAction={
+          <CanAccess scope={NidusScope.INVOICE_WRITE}>
+            <Button type="button" size="sm" onClick={openCreate}>
+              <Plus className="size-4" />
+              {t("createButton")}
+            </Button>
+          </CanAccess>
+        }
         onSearchChange={(query) => {
           const next = query.trim();
           if (next === searchQuery) return;

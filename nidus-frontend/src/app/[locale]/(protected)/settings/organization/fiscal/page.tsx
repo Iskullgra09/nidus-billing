@@ -6,6 +6,7 @@ import {
   getHaciendaCredentialsAction,
 } from "@/modules/billing/actions/fiscal";
 import { FiscalSettingsForm } from "@/modules/billing/components/fiscal-settings-form";
+import { SettingsPageHeader } from "@/shared/components/layout/settings-page-header";
 
 export default async function FiscalSettingsPage() {
   const t = await getTranslations("SettingsFiscal");
@@ -16,10 +17,7 @@ export default async function FiscalSettingsPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="text-xl font-semibold tracking-tight">{t("title")}</h2>
-        <p className="text-sm text-muted-foreground">{t("description")}</p>
-      </div>
+      <SettingsPageHeader title={t("title")} description={t("description")} />
       <FiscalSettingsForm profile={profile} credentials={credentials} />
     </div>
   );

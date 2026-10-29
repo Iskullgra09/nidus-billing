@@ -4,8 +4,8 @@ import { getCurrentUser } from "@/modules/identity/actions/auth";
 import { getOrganizationMembersPage } from "@/modules/organization/actions/members";
 import { getAvailableRoles } from "@/modules/access/actions/roles";
 import { getPendingInvitations } from "@/modules/access/actions/invitations";
-import { InviteMemberButton } from "@/modules/organization/components/invite-member-button";
 import { MembersWorkspace } from "@/modules/organization/components/members-workspace";
+import { SettingsPageHeader } from "@/shared/components/layout/settings-page-header";
 
 const PAGE_SIZE = 10;
 
@@ -38,13 +38,7 @@ export default async function MembersPage({
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between gap-4">
-        <div>
-          <h3 className="text-lg font-medium">{t("title")}</h3>
-          <p className="text-sm text-muted-foreground">{t("description")}</p>
-        </div>
-        <InviteMemberButton roles={roles} />
-      </div>
+      <SettingsPageHeader title={t("title")} description={t("description")} />
 
       <React.Suspense fallback={null}>
         <MembersWorkspace

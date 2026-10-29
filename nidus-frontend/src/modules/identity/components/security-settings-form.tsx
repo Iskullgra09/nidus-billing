@@ -56,7 +56,7 @@ export function SecuritySettingsForm() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="max-w-xl space-y-6">
       <div>
         <h3 className="text-lg font-medium">{tSet("title")}</h3>
         <p className="text-sm text-muted-foreground">{tSet("description")}</p>
@@ -64,7 +64,7 @@ export function SecuritySettingsForm() {
       <Form {...form}>
         <form
           onSubmit={form.handleSubmit(onSubmit)}
-          className="space-y-4 max-w-md"
+          className="space-y-4"
         >
           <FormField
             control={form.control}

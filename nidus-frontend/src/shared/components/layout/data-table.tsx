@@ -32,6 +32,8 @@ interface BaseDataTableProps<TData> {
   emptyMessage?: string;
   paginationText?: (start: number, end: number, total: number) => string;
   onRowClick?: (item: TData) => void;
+  /** Primary action (e.g. Add) — rendered inside the panel toolbar with search. */
+  toolbarAction?: React.ReactNode;
 }
 
 interface ClientDataTableProps<TData> extends BaseDataTableProps<TData> {
@@ -74,6 +76,7 @@ export function DataTable<TData>(props: DataTableProps<TData>) {
     paginationText,
     mode = "client",
     onRowClick,
+    toolbarAction,
   } = props;
 
   const isServer = mode === "server";
@@ -171,99 +174,107 @@ export function DataTable<TData>(props: DataTableProps<TData>) {
       ? "onSearchChange" in props
       : "searchKey" in props;
 
+  const showToolbar = showSearch || Boolean(toolbarAction);
   const containerHeight = `calc(48px + (${pageSize} * 64px) + 2px)`;
   const cursorProps = isCursor ? (props as CursorDataTableProps<TData>) : null;
 
   return (
     <div className="w-full space-y-4">
-      {showSearch && (
-        <div className="flex items-center justify-end">
-          <div className="relative w-full sm:w-80">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder={searchPlaceholder}
-              value={localSearchQuery}
-              onChange={(e) => setLocalSearchQuery(e.target.value)}
-              className="pl-9 bg-background/50 focus-visible:ring-1 focus-visible:ring-primary/50 transition-all"
-            />
+      <div className="overflow-hidden rounded-xl border border-border/80 bg-card shadow-md ring-1 ring-foreground/5 backdrop-blur-sm">
+        {showToolbar ? (
+          <div className="flex flex-col gap-3 border-b border-border/70 p-3 sm:flex-row sm:items-center sm:justify-end sm:gap-3">
+            {showSearch ? (
+              <div className="relative w-full sm:w-80">
+                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  placeholder={searchPlaceholder}
+                  value={localSearchQuery}
+                  onChange={(e) => setLocalSearchQuery(e.target.value)}
+                  className="bg-background/50 pl-9 transition-all focus-visible:ring-1 focus-visible:ring-primary/50"
+                />
+              </div>
+            ) : null}
+            {toolbarAction ? (
+              <div className="shrink-0">{toolbarAction}</div>
+            ) : null}
           </div>
-        </div>
-      )}
+        ) : null}
 
-      <div
-        className="relative flex flex-col overflow-hidden rounded-xl border border-border/80 bg-card shadow-md ring-1 ring-foreground/5 backdrop-blur-sm [&>div]:overflow-hidden"
-        style={{ height: containerHeight }}
-      >
-        <Table className="flex-1 w-full">
-          <TableHeader className="sticky top-0 z-10 border-b border-border/70 bg-muted/55">
-            <TableRow className="hover:bg-transparent h-12">
-              {columns.map((col, index) => {
-                const align = col.align ?? "left";
-                const alignClass =
-                  align === "right"
-                    ? "text-right"
-                    : align === "center"
-                      ? "text-center"
-                      : "text-left";
-                return (
-                  <TableHead
-                    key={index}
-                    className={`font-medium ${alignClass} ${col.className || ""}`}
-                  >
-                    {col.header}
-                  </TableHead>
-                );
-              })}
-            </TableRow>
-          </TableHeader>
-          <TableBody className="align-top">
-            {processedData.length === 0 ? (
-              <TableRow className="hover:bg-transparent border-0">
-                <TableCell
-                  colSpan={columns.length}
-                  className="h-full text-center text-muted-foreground align-middle"
-                >
-                  <div className="flex flex-col items-center justify-center space-y-2 mt-12">
-                    <Inbox className="h-8 w-8 text-muted-foreground/30" />
-                    <p>{emptyMessage}</p>
-                  </div>
-                </TableCell>
+        <div
+          className="relative flex flex-col overflow-hidden [&>div]:overflow-hidden"
+          style={{ height: containerHeight }}
+        >
+          <Table className="w-full flex-1">
+            <TableHeader className="sticky top-0 z-10 border-b border-border/70 bg-muted/55">
+              <TableRow className="h-12 hover:bg-transparent">
+                {columns.map((col, index) => {
+                  const align = col.align ?? "left";
+                  const alignClass =
+                    align === "right"
+                      ? "text-right"
+                      : align === "center"
+                        ? "text-center"
+                        : "text-left";
+                  return (
+                    <TableHead
+                      key={index}
+                      className={`font-medium ${alignClass} ${col.className || ""}`}
+                    >
+                      {col.header}
+                    </TableHead>
+                  );
+                })}
               </TableRow>
-            ) : (
-              processedData.map((item, rowIndex) => (
-                <TableRow
-                  key={rowIndex}
-                  className={`hover:bg-muted/40 transition-colors border-b-border/40 last:border-b h-16 ${
-                    onRowClick ? "cursor-pointer" : ""
-                  }`}
-                  onClick={onRowClick ? () => onRowClick(item) : undefined}
-                >
-                  {columns.map((col, colIndex) => {
-                    const align = col.align ?? "left";
-                    const alignClass =
-                      align === "right"
-                        ? "text-right tabular-nums"
-                        : align === "center"
-                          ? "text-center"
-                          : "text-left";
-                    return (
-                      <TableCell
-                        key={colIndex}
-                        className={`${alignClass} ${col.className || ""}`}
-                      >
-                        {col.cell
-                          ? col.cell(item)
-                          : col.accessorKey
-                            ? String(item[col.accessorKey] ?? "")
-                            : null}
-                      </TableCell>
-                    );
-                  })}
+            </TableHeader>
+            <TableBody className="align-top">
+              {processedData.length === 0 ? (
+                <TableRow className="border-0 hover:bg-transparent">
+                  <TableCell
+                    colSpan={columns.length}
+                    className="h-full text-center align-middle text-muted-foreground"
+                  >
+                    <div className="mt-12 flex flex-col items-center justify-center space-y-2">
+                      <Inbox className="h-8 w-8 text-muted-foreground/30" />
+                      <p>{emptyMessage}</p>
+                    </div>
+                  </TableCell>
                 </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
+              ) : (
+                processedData.map((item, rowIndex) => (
+                  <TableRow
+                    key={rowIndex}
+                    className={`h-16 border-b-border/40 transition-colors last:border-b hover:bg-muted/40 ${
+                      onRowClick ? "cursor-pointer" : ""
+                    }`}
+                    onClick={onRowClick ? () => onRowClick(item) : undefined}
+                  >
+                    {columns.map((col, colIndex) => {
+                      const align = col.align ?? "left";
+                      const alignClass =
+                        align === "right"
+                          ? "text-right tabular-nums"
+                          : align === "center"
+                            ? "text-center"
+                            : "text-left";
+                      return (
+                        <TableCell
+                          key={colIndex}
+                          className={`${alignClass} ${col.className || ""}`}
+                        >
+                          {col.cell
+                            ? col.cell(item)
+                            : col.accessorKey
+                              ? String(item[col.accessorKey] ?? "")
+                              : null}
+                        </TableCell>
+                      );
+                    })}
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </div>
       </div>
 
       <div className="flex items-center justify-between px-1">

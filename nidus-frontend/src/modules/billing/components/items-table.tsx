@@ -164,15 +164,6 @@ export function ItemsTable({
 
   return (
     <div className="space-y-4">
-      <div className="flex justify-end">
-        <CanAccess scope={NidusScope.ITEM_WRITE}>
-          <Button type="button" onClick={openCreate}>
-            <Plus className="size-4" />
-            {t("createButton")}
-          </Button>
-        </CanAccess>
-      </div>
-
       <DataTable
         mode="cursor"
         columns={columns}
@@ -184,6 +175,14 @@ export function ItemsTable({
         isFirstPage={!searchParams.get("cursor")}
         initialSearch={searchQuery}
         onRowClick={openView}
+        toolbarAction={
+          <CanAccess scope={NidusScope.ITEM_WRITE}>
+            <Button type="button" size="sm" onClick={openCreate}>
+              <Plus className="size-4" />
+              {t("createButton")}
+            </Button>
+          </CanAccess>
+        }
         onSearchChange={(query) => {
           const next = query.trim();
           if (next === searchQuery) return;

@@ -5,6 +5,7 @@ import {
   getAssignableScopes,
 } from "@/modules/access/actions/roles";
 import { RolesTable } from "@/modules/access/components/roles-table";
+import { SettingsPageHeader } from "@/shared/components/layout/settings-page-header";
 
 export default async function RolesPage() {
   const t = await getTranslations("SettingsRoles");
@@ -15,14 +16,8 @@ export default async function RolesPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h3 className="text-lg font-medium">{t("title")}</h3>
-        <p className="text-sm text-muted-foreground">{t("description")}</p>
-      </div>
-
-      <div className="rounded-md border bg-card p-4 shadow-sm">
-        <RolesTable roles={roles} scopes={scopes} />
-      </div>
+      <SettingsPageHeader title={t("title")} description={t("description")} />
+      <RolesTable roles={roles} scopes={scopes} />
     </div>
   );
 }

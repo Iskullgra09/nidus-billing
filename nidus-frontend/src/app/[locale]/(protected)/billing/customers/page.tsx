@@ -8,6 +8,7 @@ import {
 } from "@/modules/billing/actions/customers";
 import { PartiesTable } from "@/modules/billing/components/parties-table";
 import { NidusScope } from "@/shared/access/scopes";
+import { SettingsPageHeader } from "@/shared/components/layout/settings-page-header";
 
 const PAGE_SIZE = 10;
 
@@ -30,10 +31,7 @@ export default async function CustomersPage({
 
   return (
     <div className="space-y-6">
-      <div>
-        <h3 className="text-lg font-medium">{t("title")}</h3>
-        <p className="text-sm text-muted-foreground">{t("description")}</p>
-      </div>
+      <SettingsPageHeader title={t("title")} description={t("description")} />
 
       <React.Suspense fallback={null}>
         <PartiesTable

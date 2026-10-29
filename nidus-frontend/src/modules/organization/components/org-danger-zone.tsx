@@ -49,7 +49,7 @@ export function OrgDangerZone({
 
   return (
     <CanAccess scope={NidusScope.ORG_DELETE}>
-      <div className="max-w-md space-y-4 rounded-md border border-destructive/40 bg-destructive/5 p-5">
+      <div className="max-w-2xl space-y-4 rounded-md border border-destructive/40 bg-destructive/5 p-5">
         <div className="space-y-1">
           <h4 className="text-sm font-semibold text-destructive">
             {t("dangerZoneTitle")}

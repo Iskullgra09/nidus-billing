@@ -10,17 +10,18 @@ export default async function SettingsLayout({
   const t = await getTranslations("SettingsLayout");
 
   return (
-    <div className="space-y-6 pb-16">
+    <div className="space-y-4 pb-16">
       <div className="space-y-0.5">
         <h2 className="text-2xl font-bold tracking-tight">{t("title")}</h2>
         <p className="text-muted-foreground">{t("description")}</p>
       </div>
-      <hr className="my-6 border-border" />
-      <div className="flex flex-col space-y-8 lg:flex-row lg:space-x-12 lg:space-y-0">
-        <aside className="lg:w-1/5">
-          <SettingsSidebar />
-        </aside>
-        <div className="flex-1 min-w-0 lg:max-w-4xl">{children}</div>
+      <div className="rounded-xl border border-border/70 bg-card p-4 shadow-sm lg:p-6">
+        <div className="flex flex-col gap-8 lg:flex-row lg:gap-8">
+          <aside className="w-full shrink-0 border-border/60 lg:w-56 lg:border-r lg:pr-6">
+            <SettingsSidebar />
+          </aside>
+          <div className="min-w-0 flex-1">{children}</div>
+        </div>
       </div>
     </div>
   );

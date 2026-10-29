@@ -1,6 +1,7 @@
 import { getTranslations } from "next-intl/server";
 import { getRecentAuditLogs } from "@/modules/access/actions/audit";
 import { AuditLogsPanel } from "@/modules/access/components/audit-logs-panel";
+import { SettingsPageHeader } from "@/shared/components/layout/settings-page-header";
 
 export default async function AuditSettingsPage() {
   const t = await getTranslations("SettingsAudit");
@@ -8,12 +9,8 @@ export default async function AuditSettingsPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h3 className="text-lg font-medium">{t("title")}</h3>
-        <p className="text-sm text-muted-foreground">{t("description")}</p>
-      </div>
-
-      <div className="rounded-md border bg-card p-4 shadow-sm">
+      <SettingsPageHeader title={t("title")} description={t("description")} />
+      <div className="overflow-hidden rounded-xl border border-border/80 bg-card p-4 shadow-md ring-1 ring-foreground/5">
         <AuditLogsPanel
           logs={logs}
           emptyLabel={t("empty")}

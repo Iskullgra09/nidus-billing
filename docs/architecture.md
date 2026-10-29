@@ -1232,16 +1232,16 @@ Issued invoices need commercial consecutive numbers and cash application (AR) be
 **Status:** Accepted
 
 ### Context
-Nidus Billing will eventually offer adjacent products (purchases/OC, inventory, payroll, subscriptions, treasury). Stuffing those into `invoice` or the B0–B9 critical path would blur AR vs AP and slow Hacienda delivery.
+Nidus Billing will eventually offer adjacent products (purchases/OC, inventory, payroll, subscriptions, treasury). Stuffing those into `invoice` or the B0–B11 critical path would blur AR vs AP and slow Hacienda delivery.
 
 ### Decision
-1. **Core (B0–B9):** sales master data, operational sales invoices, payments/balances, outbound email, CR Hacienda emit/receive/mailbox.
+1. **Core (B0–B11):** sales master data, operational sales invoices, payments/balances, outbound email, CR Hacienda emit/receive/mailbox, CRC|USD whitelist (B6), FX (B10), party enrichment (B11).
 2. **`invoice` means sales AR only.** Never add `is_purchase`; inbound supplier documents use dedicated models (B7+).
-3. **Add-ons (post-B9):** purchase orders, AP bills/payments, inventory, payroll, subscriptions, bank transfers — gated later via scopes / org module flags; separate tables and nav entries.
-4. **Fiscal layer:** Hacienda types (FE/TE/NC/ND) attach beside the operational invoice (future `invoice_fiscal`), not by rewriting B2 headers.
+3. **Add-ons (post-core):** purchase orders, AP bills/payments, inventory, payroll, subscriptions, bank transfers — gated later via scopes / org module flags; separate tables and nav entries.
+4. **Fiscal layer:** Hacienda types (FE/TE/NC/ND) attach beside the operational invoice (`invoice_fiscal` in B6), not by rewriting B2 headers.
 5. **Ingest channels stay phased:** manual drafts (B2), outbound email (B4), Hacienda XML (B6–B7), mailbox (B8). Do not invent a parallel “upload anything” path that bypasses those phases.
-6. **Tax depth later:** B2/B3 keep one optional `tax_rate` % per line for operational totals. Multi-code tax catalogs / withholdings wait for fiscal work (B5–B6); document in README backlog until then.
-7. **Party contacts stay flat for now:** single optional `phone` / `email` on customer & supplier. Multi-phone / multi-address models wait for fiscal/shipping needs (B5/B9 backlog) — avoid premature normalization in B1–B3.
+6. **Tax depth:** B2/B3 keep one optional `tax_rate` % per line for operational totals. Multi-code tax catalogs needed for XML land in **B6**; withholdings/extra matrices stay out unless MH emit requires them.
+7. **Party contacts stay flat through B5:** single optional `phone` / `email` on customer & supplier. Multi-phone / multi-address models wait for **B11**.
 
 ### Consequences
 * **Positive:** Stable sales schema; clear product packaging later; product ideas park in README without schema churn.
@@ -1280,10 +1280,10 @@ B6 needs issuer identity and signing material before live Hacienda calls. Operat
 
 ### Decision
 1. **Typed tables** (RLS): `organization_fiscal_profile` (1:1 org) and `organization_hacienda_credential` (1:1 org).
-2. **Encrypt at rest** with Fernet (`CREDENTIALS_ENCRYPTION_KEY`, or SHA-256 of `SECRET_KEY` in local/dev only). Never return ciphertext to the client.
+2. **Encrypt at rest** with Fernet (`CREDENTIALS_ENCRYPTION_KEY`, or SHA-256 of `SECRET_KEY` in local/dev only). Production must set `CREDENTIALS_ENCRYPTION_KEY`. Never return ciphertext to the client.
 3. **API:** `GET/PUT /billing/fiscal-profile`; `GET/PUT/DELETE /billing/hacienda-credentials` (multipart for `.p12`). Status response only exposes booleans + non-secret metadata.
 4. **Scopes:** `billing:fiscal:read` / `billing:fiscal:write` (Admin/Owner). Audit actions without secret values.
-5. **Out of scope:** live Hacienda submit/verify (B6); FX / multi-currency engine (backlog).
+5. **Out of scope:** live Hacienda submit/verify (B6); CRC|USD whitelist (B6); FX / BCCR engine (B10).
 
 ### Consequences
 * **Positive:** Clear path for B6 signing; secrets isolated from org settings JSON.
