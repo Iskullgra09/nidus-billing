@@ -8,6 +8,7 @@ export type ShellNavItemId =
   | "customers"
   | "suppliers"
   | "items"
+  | "invoices"
   | "settings"
   | "organization"
   | "members"

@@ -17,6 +17,7 @@ dependencies = [
     "pyjwt[crypto]>=2.12.1",
     "pytest>=9.0.2",
     "pytest-asyncio>=1.3.0",
+    "reportlab>=5.1.0",
     "ruff>=0.15.8",
     "sqlalchemy>=2.0.48",
     "sqlmodel>=0.0.37",

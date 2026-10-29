@@ -29,6 +29,8 @@ class NidusScope(StrEnum):
     SUPPLIER_WRITE = "billing:supplier:write"
     ITEM_READ = "billing:item:read"
     ITEM_WRITE = "billing:item:write"
+    INVOICE_READ = "billing:invoice:read"
+    INVOICE_WRITE = "billing:invoice:write"
 
     @classmethod
     def get_implied_scopes(cls, scope: str) -> Set[str]:
@@ -104,6 +106,8 @@ DEFAULT_ROLES_CONFIG: Dict[DefaultRole, Dict[str, Any]] = {
             NidusScope.SUPPLIER_WRITE,
             NidusScope.ITEM_READ,
             NidusScope.ITEM_WRITE,
+            NidusScope.INVOICE_READ,
+            NidusScope.INVOICE_WRITE,
         ],
     },
     DefaultRole.MEMBER: {
@@ -114,6 +118,7 @@ DEFAULT_ROLES_CONFIG: Dict[DefaultRole, Dict[str, Any]] = {
             NidusScope.CUSTOMER_READ,
             NidusScope.SUPPLIER_READ,
             NidusScope.ITEM_READ,
+            NidusScope.INVOICE_READ,
         ],
     },
     DefaultRole.VIEWER: {
@@ -123,6 +128,7 @@ DEFAULT_ROLES_CONFIG: Dict[DefaultRole, Dict[str, Any]] = {
             NidusScope.CUSTOMER_READ,
             NidusScope.SUPPLIER_READ,
             NidusScope.ITEM_READ,
+            NidusScope.INVOICE_READ,
         ],
     },
 }

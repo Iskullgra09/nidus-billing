@@ -46,8 +46,8 @@ Phases are **product slices**, not Core’s old Phase 1–16 list. Status update
 | :---: | :--- | :--- |
 | **B0** | Brand & side-by-side runtime | Done |
 | **B1** | Parties & catalog | Done |
-| **B2** | Operational docs (contado/crédito) + PDF | Planned |
-| **B3** | Numbering, payments & balances | Planned |
+| **B2** | Operational docs (contado/crédito) + PDF | Done |
+| **B3** | Numbering, payments & balances | Done |
 | **B4** | Outbound email (send invoice) | Planned |
 | **B5** | Org fiscal profile & Hacienda credentials | Planned |
 | **B6** | Hacienda outbound (emit + verify) | Planned |
@@ -128,12 +128,22 @@ Operational billing (B1–B4) can ship value before fiscal/Hacienda. Email send 
 
 ---
 
+## Product packaging: core vs add-ons
+
+**Core (roadmap B0–B9):** customers/suppliers/catalog, **sales** invoices (AR), payments & balances, PDF/email, Costa Rica Hacienda emit/receive/mailbox.
+
+**Add-ons (post-B9, not in the critical path):** purchase orders, supplier bills (AP), inventory/kardex, payroll (planillas), subscriptions, bank transfers/treasury. These get their own tables, scopes, and nav — never a boolean on `invoice`.
+
+See ADR B-005 in `docs/architecture.md`.
+
 ## Explicit non-goals (this product)
 
 | Non-goal | Where it belongs |
 | :--- | :--- |
-| Stock / kardex / warehouses | Future `nidus-inventory` |
+| Stock / kardex / warehouses | Future `nidus-inventory` / add-on |
 | Full accounting / asientos | Separate product or later expansion |
+| Purchase orders / AP payments | Post-B9 add-on (inbound FE is B7–B8 only) |
+| Payroll / subscriptions / treasury | Post-B9 add-ons |
 | Multi-country tax engines | Costa Rica first |
 | Billing domain inside Core | Never — keep forks clean |
 

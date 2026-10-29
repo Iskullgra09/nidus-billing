@@ -1178,3 +1178,68 @@ Billing needs durable master data before invoices: customers, suppliers, and sel
 ### Consequences
 * **Positive:** Clear foundation for B2 invoices; inventory stays out of this repo.
 * **Negative:** Party duplication (customer vs supplier tables) is intentional for later fiscal/inbound differences.
+
+---
+
+## ADR B-003: Operational Invoices & PDF (Phase B2)
+
+**Date:** 2026-10-29
+**Status:** Accepted
+
+### Context
+B1 parties/catalog exist. Tenants need operational sales documents before fiscal Hacienda work: cash vs credit payment condition, editable drafts, issue/void lifecycle, printable PDF. Legal numbering series and payment balances belong in B3.
+
+### Decision
+1. **Scope of B2:** `invoice` + `invoice_line` only. Quotes deferred (README listed them as optional).
+2. **Payment condition:** `contado` | `credito`. `due_date` required when issuing a `credito` invoice.
+3. **Status machine:** `draft` → `issued` → `void`. Soft-delete only while `draft`. Issued invoices are immutable except void. Payment statuses (`paid` / `partial` / `overdue`) deferred to B3.
+4. **Lines:** Snapshot description/unit/price/tax from catalog `item` (or free text). Amounts (`subtotal`, `tax_total`, `total`) computed server-side. Lines carry `organization_id` for the same RLS pattern as B1.
+5. **PDF:** `GET /api/v1/billing/invoices/{id}/pdf` returns `application/pdf` (ReportLab). Available for draft preview and issued documents.
+6. **Scopes:** `billing:invoice:read|write`. Admin write+read; Member/Viewer read.
+7. **Out of scope:** Hacienda XML, legal consecutive series, payments/balances, quotes.
+
+### Consequences
+* **Positive:** Sellable operational invoices without blocking on fiscal stack.
+* **Negative:** Display `reference_number` is optional/internal until B3 series; no quote→invoice conversion yet.
+
+---
+
+## ADR B-004: Document Series, Payments & Balances (Phase B3)
+
+**Date:** 2026-10-29
+**Status:** Accepted
+
+### Context
+Issued invoices need commercial consecutive numbers and cash application (AR) before Hacienda. Full AP, purchase orders, payroll, and subscriptions stay out of this phase.
+
+### Decision
+1. **`document_series`:** Per-org, per-doc-type counter (`invoice`) with `prefix`, `next_number`, `padding`. First issue auto-creates a default series if missing.
+2. **`document_number`:** Assigned on issue (immutable). `reference_number` remains optional free text.
+3. **`invoice_payment`:** Tenant-scoped payments against an invoice (`amount`, `paid_at`, `method`, `notes`). Soft-delete not required for v1; delete only while reversing a mistaken payment and recalculating balances.
+4. **Balances:** `amount_paid` + `balance_due` denormalized on `invoice`. Status becomes `partial` or `paid` from payments; `void` blocked if `amount_paid > 0`.
+5. **Overdue:** Derived in API (`due_date < today` and `balance_due > 0` and status not `void`/`draft`) — not a stored status.
+6. **Out of scope:** AP/supplier bills, purchase orders, accounting ledger, Hacienda consecutive/clave.
+
+### Consequences
+* **Positive:** Clear AR path for contado/crédito without fiscal coupling.
+* **Negative:** Commercial series ≠ Hacienda numbering (B6 will attach fiscal identity separately).
+
+---
+
+## ADR B-005: Core Billing vs Future Add-ons
+
+**Date:** 2026-10-29
+**Status:** Accepted
+
+### Context
+Nidus Billing will eventually offer adjacent products (purchases/OC, inventory, payroll, subscriptions, treasury). Stuffing those into `invoice` or the B0–B9 critical path would blur AR vs AP and slow Hacienda delivery.
+
+### Decision
+1. **Core (B0–B9):** sales master data, operational sales invoices, payments/balances, outbound email, CR Hacienda emit/receive/mailbox.
+2. **`invoice` means sales AR only.** Never add `is_purchase`; inbound supplier documents use dedicated models (B7+).
+3. **Add-ons (post-B9):** purchase orders, AP bills/payments, inventory, payroll, subscriptions, bank transfers — gated later via scopes / org module flags; separate tables and nav entries.
+4. **Fiscal layer:** Hacienda types (FE/TE/NC/ND) attach beside the operational invoice (future `invoice_fiscal`), not by rewriting B2 headers.
+
+### Consequences
+* **Positive:** Stable sales schema; clear product packaging later.
+* **Negative:** Some CR shops wanting OC/AP early must wait or use external tools until add-ons land.

@@ -1,6 +1,10 @@
 from .audit.audit_log import AuditLog as AuditLog
 from .billing.customer import Customer as Customer
+from .billing.document_series import DocumentSeries as DocumentSeries
+from .billing.invoice import Invoice as Invoice
+from .billing.invoice import InvoiceLine as InvoiceLine
 from .billing.item import Item as Item
+from .billing.payment import InvoicePayment as InvoicePayment
 from .billing.supplier import Supplier as Supplier
 from .identity.invitation import Invitation as Invitation
 from .identity.member import Member as Member
