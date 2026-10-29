@@ -66,6 +66,20 @@ class HaciendaFiscalStatus(StrEnum):
     ERROR = "error"
 
 
+class InboundIngestChannel(StrEnum):
+    MANUAL_UPLOAD = "manual_upload"
+    HACIENDA_SYNC = "hacienda_sync"
+    EMAIL = "email"
+
+
+class MensajeReceptorCode(StrEnum):
+    """CR MensajeReceptor @Mensaje values."""
+
+    ACCEPTED = "1"
+    ACCEPTED_PARTIAL = "2"
+    REJECTED = "3"
+
+
 class HaciendaTaxRateCode(StrEnum):
     EXENTO = "01"
     REDUCIDA_1 = "02"

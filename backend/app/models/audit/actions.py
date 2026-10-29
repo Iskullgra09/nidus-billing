@@ -49,6 +49,11 @@ class AuditAction(StrEnum):
     HACIENDA_CREDENTIAL_DELETE = "hacienda_credential.delete"
     INVOICE_FISCAL_EMIT = "invoice_fiscal.emit"
     INVOICE_FISCAL_VERIFY = "invoice_fiscal.verify"
+    INBOUND_CREATE = "inbound_fiscal.create"
+    INBOUND_LINK = "inbound_fiscal.link"
+    INBOUND_ACCEPT = "inbound_fiscal.accept"
+    INBOUND_REJECT = "inbound_fiscal.reject"
+    INBOUND_VERIFY = "inbound_fiscal.verify"
 
 
 class AuditResourceType(StrEnum):
@@ -67,3 +72,4 @@ class AuditResourceType(StrEnum):
     FISCAL_PROFILE = "fiscal_profile"
     HACIENDA_CREDENTIAL = "hacienda_credential"
     INVOICE_FISCAL = "invoice_fiscal"
+    INBOUND_FISCAL = "inbound_fiscal_document"

@@ -50,10 +50,10 @@ Phases are **product slices**, not Core’s old Phase 1–16 list. Status update
 | **B3** | Numbering, payments & balances | Done |
 | **B4** | Outbound email (send invoice) | Done |
 | **B5** | Org fiscal profile & Hacienda credentials | Done |
-| **B6** | Hacienda outbound (emit + verify), CRC/USD whitelist, tax codes for XML | Done (mock emit; live XAdES gated) |
+| **B6** | Hacienda outbound — **facturas de venta** emit + verify | Done (mock emit; live XAdES gated) |
 | **B6.1** | XAdES signer + sandbox live path; USD rate on FE; CABYS UI mínimo | Done (mock default; live gated) |
-| **B7** | Hacienda inbound (receive / accept-reject) | Planned |
-| **B8** | Inbound email mailbox (load supplier invoices) | Planned |
+| **B7** | **Facturas de compra** — receive FE XML + accept/reject Hacienda | In progress |
+| **B8** | Correo de compras (mailbox → same purchase inbox) | Planned |
 | **B9** | Hardening, UX polish, quotes→invoice, domain tests | Planned |
 | **B10** | FX / BCCR rates + multi-currency AR reports | Planned |
 | **B11** | Party enrichment (multi contact / address) | Planned |
@@ -65,7 +65,20 @@ B0 → B1 → B2 → B3 → B4 → B5 → B6 → B6.1 → B7 → B8 → B9
 Add-ons (post-core): AP/OC, inventory, payroll, subscriptions, treasury
 ```
 
-Operational billing (B1–B4) ships value before fiscal/Hacienda. B5 stores issuer identity and encrypted credentials. B6–B8 are the Hacienda critical path (B6.1 closes outbound before inbound). B9–B11 harden product quality after emit/receive work.
+Operational billing (B1–B4) ships value before fiscal/Hacienda. B5 stores issuer identity and encrypted credentials. B6–B8 are the Hacienda critical path (B6.1 closes **venta** outbound before **compra** inbound). B9–B11 harden product quality after emit/receive work.
+
+### Product IA (shell) — sales vs purchases
+
+Base billing is **one** product area with **two document rails**, not two unrelated Hacienda modules:
+
+| Shell group | Nav labels | Meaning |
+| :--- | :--- | :--- |
+| **Facturación** | Facturas de venta · Facturas de compra | Day-to-day documents |
+| **Maestros** | Clientes · Proveedores · Catálogo | Supporting master data |
+
+- **Factura de venta** = what you issue and collect (`invoice` + `invoice_fiscal` emit). Contado/crédito apply here only. Primary path: UI create → issue → Hacienda XML **out**.
+- **Factura de compra** = supplier e-docs you register and accept/reject (`inbound_fiscal_document` + MensajeReceptor). Primary path: XML **in** (manual B7; email B8). Product name for the old “Bandeja Hacienda”.
+- **Not a third invoice module:** NC/ND/tiquete (02/03/04) are later **variants on the same emit/receive rails**, not new top-level menus. Full AP/payments on purchases stays post-core add-on.
 
 ### B0 — Brand & side-by-side runtime
 
@@ -128,19 +141,22 @@ Operational billing (B1–B4) ships value before fiscal/Hacienda. B5 stores issu
 **Shipped:** `signxml` XAdES + mock fallback; invoice FX fields + `TipoCambio`; CABYS on lines/items + emit gates; migration `d2e3f4a5b6c7`; demo seed CRC/USD FE-ready; unit + API tests.  
 **Done when:** mock CI green; XAdES with test `.p12`; USD/CABYS block incomplete emit; UI captures rate + CABYS. ✅
 
-### B7 — Hacienda inbound (receive / accept-reject)
+### B7 — Facturas de compra (Hacienda receive / accept-reject)
 
-**Backend:** pull or receive supplier e-documents; map to supplier; accept/reject workflow against Hacienda; store XML + status.  
-**Frontend:** inbox / bandeja, accept-reject actions, link to supplier record.  
-**Out of scope:** email-based ingest (B8).
+**Product:** purchase e-invoices (UI: **Facturas de compra**). Technical route/API stay `/billing/inbound*` / `inbound_fiscal_document`.
 
-### B8 — Inbound email mailbox (load into the system)
+**Backend:** `inbound_fiscal_document` table; manual XML upload (parse FE 01–04 when present); auto-link supplier by tax id; MensajeReceptor accept/reject + verify (mock default / live gated like B6.1).  
+**Frontend:** `/billing/inbound` — upload XML, view, accept/reject/verify. Shell under **Facturación** next to sales invoices; masters in a separate group.  
+**Scopes:** `billing:inbound:read|write`.  
+**Out of scope:** email-based ingest (**B8**); MH receptor pull sync; NC/ND/tiquete **emit**; sales XML import; IVA crédito / AP ledger.
 
-**Goal:** invoices that arrive by email (or are forwarded to a dedicated org inbox) are parsed and loaded as inbound documents for review.
+### B8 — Correo de compras (mailbox → facturas de compra)
+
+**Goal:** supplier invoices that arrive by email (or are forwarded to a dedicated **per-org** inbox) are parsed and loaded into the same **Facturas de compra** list for triage.
 
 **Backend:** per-org inbound address or IMAP/webhook mailbox; parse attachments (XML preferred; PDF fallback metadata); dedupe by clave; create inbound draft linked to supplier when possible; notify tenant.  
-**Frontend:** mailbox settings, “imported from email” badge, triage into B7 accept/reject.  
-**Out of scope:** replacing Hacienda as source of truth — email is an ingest channel, verification still via Hacienda where applicable.
+**Frontend:** mailbox settings (“este es tu correo de facturas de compra”), “imported from email” badge, same accept/reject as B7.  
+**Out of scope:** replacing Hacienda as source of truth — email is an ingest channel; accept/reject still via MensajeReceptor.
 
 ### B9 — Hardening, UX polish, domain tests
 
@@ -160,15 +176,15 @@ Operational billing (B1–B4) ships value before fiscal/Hacienda. B5 stores issu
 **Frontend:** party detail editors beyond a single phone/email.  
 **Out of scope:** expanding party schema during B1–B5 (flat contact fields stay until this phase).
 
-### Creation & ingest channels (how invoices enter the system)
+### Creation & ingest channels (how documents enter the system)
 
-| Channel | When | Notes |
-| :--- | :--- | :--- |
-| **Manual UI** | B2 now | Draft with ≥1 line → edit lines while draft → issue. Lines are not a separate document; they belong to the invoice. |
-| **Outbound email** | B4 | Send issued PDF (later XML/clave). |
-| **Hacienda XML emit** | B6 | Fiscal layer beside operational invoice. |
-| **Hacienda inbound** | B7 | Supplier e-docs → accept/reject (not sales AR). |
-| **Email mailbox ingest** | B8 | XML/PDF attachments → inbound drafts for triage. |
+| Channel | Rail | When | Notes |
+| :--- | :--- | :--- | :--- |
+| **Manual UI** | Venta | B2 now | Draft with ≥1 line → issue. Contado/crédito live here. |
+| **Outbound email** | Venta | B4 | Send issued PDF (later XML/clave). |
+| **Hacienda XML emit** | Venta | B6 | System builds FE XML out — not “upload sales XML” as primary. |
+| **Manual XML upload** | Compra | B7 | Supplier FE in → Facturas de compra → accept/reject. |
+| **Email mailbox** | Compra | B8 | Forward to org inbox → same purchase list. |
 
 ### UX convention (billing lists)
 

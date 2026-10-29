@@ -1,7 +1,11 @@
 import type { LucideIcon } from "lucide-react";
 import type { NidusScope } from "@/shared/access/scopes";
 
-export type ShellNavGroupId = "general" | "billing" | "workspace";
+export type ShellNavGroupId =
+  | "general"
+  | "billing"
+  | "billing_masters"
+  | "workspace";
 
 export type ShellNavItemId =
   | "dashboard"
@@ -9,6 +13,7 @@ export type ShellNavItemId =
   | "suppliers"
   | "items"
   | "invoices"
+  | "inbound"
   | "settings"
   | "organization"
   | "fiscal"

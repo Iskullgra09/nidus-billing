@@ -63,11 +63,8 @@ def _mock_sign(xml_unsigned: str) -> SignResult:
     marker = "<!-- nidus-mock-xades-epes -->"
     if marker in xml_unsigned:
         return SignResult(xml_signed=xml_unsigned, mock=True)
-    if "</FacturaElectronica>" not in xml_unsigned:
-        raise ValueError("Unsigned XML is missing FacturaElectronica root close tag")
-    signed = xml_unsigned.replace(
-        "</FacturaElectronica>",
-        f"{marker}</FacturaElectronica>",
-        1,
-    )
-    return SignResult(xml_signed=signed, mock=True)
+    for close_tag in ("</FacturaElectronica>", "</MensajeReceptor>"):
+        if close_tag in xml_unsigned:
+            signed = xml_unsigned.replace(close_tag, f"{marker}{close_tag}", 1)
+            return SignResult(xml_signed=signed, mock=True)
+    raise ValueError("Unsigned XML is missing a supported root close tag")

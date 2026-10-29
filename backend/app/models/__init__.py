@@ -5,9 +5,11 @@ from .billing.fiscal_profile import OrganizationFiscalProfile as OrganizationFis
 from .billing.hacienda_credential import (
     OrganizationHaciendaCredential as OrganizationHaciendaCredential,
 )
+from .billing.inbound_document import InboundFiscalDocument as InboundFiscalDocument
 from .billing.invoice import Invoice as Invoice
 from .billing.invoice import InvoiceLine as InvoiceLine
 from .billing.invoice_email import InvoiceEmailDelivery as InvoiceEmailDelivery
+from .billing.invoice_fiscal import InvoiceFiscal as InvoiceFiscal
 from .billing.item import Item as Item
 from .billing.payment import InvoicePayment as InvoicePayment
 from .billing.supplier import Supplier as Supplier

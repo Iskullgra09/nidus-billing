@@ -102,6 +102,28 @@ class HaciendaClient:
             mock=False,
         )
 
+    async def submit_mensaje_receptor(
+        self,
+        *,
+        clave: str,
+        issued_at: datetime,
+        emitter_type: str,
+        emitter_number: str,
+        receptor_type: str,
+        receptor_number: str,
+        xml_signed: str,
+    ) -> HaciendaSubmitResult:
+        """Submit receptor accept/reject (MensajeReceptor) for an inbound clave."""
+        return await self.submit(
+            clave=clave,
+            issued_at=issued_at,
+            emitter_type=emitter_type,
+            emitter_number=emitter_number,
+            receptor_type=receptor_type,
+            receptor_number=receptor_number,
+            xml_signed=xml_signed,
+        )
+
     async def verify(self, clave: str) -> HaciendaSubmitResult:
         if not self.live:
             return HaciendaSubmitResult(

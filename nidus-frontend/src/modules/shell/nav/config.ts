@@ -1,6 +1,7 @@
 import {
   Building2,
   Contact,
+  FileInput,
   FileText,
   LayoutDashboard,
   Package,
@@ -30,32 +31,46 @@ export const SHELL_NAV_GROUPS: ShellNavGroup[] = [
     id: "billing",
     items: [
       {
+        id: "invoices",
+        href: "/billing/invoices",
+        icon: FileText,
+        scope: NidusScope.INVOICE_READ,
+        keywords:
+          "invoices facturas venta sales billing contado credito pdf emitir",
+      },
+      {
+        id: "inbound",
+        href: "/billing/inbound",
+        icon: FileInput,
+        scope: NidusScope.INBOUND_READ,
+        keywords:
+          "inbound compras purchase facturas compra bandeja hacienda proveedores accept reject",
+      },
+    ],
+  },
+  {
+    id: "billing_masters",
+    items: [
+      {
         id: "customers",
         href: "/billing/customers",
         icon: Contact,
         scope: NidusScope.CUSTOMER_READ,
-        keywords: "customers clientes billing",
+        keywords: "customers clientes billing maestros",
       },
       {
         id: "suppliers",
         href: "/billing/suppliers",
         icon: Truck,
         scope: NidusScope.SUPPLIER_READ,
-        keywords: "suppliers proveedores billing",
+        keywords: "suppliers proveedores billing maestros",
       },
       {
         id: "items",
         href: "/billing/items",
         icon: Package,
         scope: NidusScope.ITEM_READ,
-        keywords: "items catalogo products services productos",
-      },
-      {
-        id: "invoices",
-        href: "/billing/invoices",
-        icon: FileText,
-        scope: NidusScope.INVOICE_READ,
-        keywords: "invoices facturas billing contado credito pdf",
+        keywords: "items catalogo products services productos maestros",
       },
     ],
   },

@@ -67,7 +67,14 @@
         "hacienda_credentials_deleted": "Hacienda credentials removed successfully.",
         "invoice_fiscal_retrieved": "Hacienda fiscal status retrieved successfully.",
         "invoice_fiscal_emitted": "Invoice submitted to Hacienda successfully.",
-        "invoice_fiscal_verified": "Hacienda status refreshed successfully."
+        "invoice_fiscal_verified": "Hacienda status refreshed successfully.",
+        "inbound_list": "Inbound documents retrieved successfully.",
+        "inbound_retrieved": "Inbound document retrieved successfully.",
+        "inbound_created": "Inbound document registered successfully.",
+        "inbound_linked": "Inbound document supplier link updated.",
+        "inbound_accepted": "Acceptance submitted to Hacienda.",
+        "inbound_rejected": "Rejection submitted to Hacienda.",
+        "inbound_verified": "Inbound Hacienda status refreshed."
     },
     "billing": {
         "customer_tax_id_conflict": "A customer with tax id '{tax_id}' already exists in this organization.",
@@ -87,6 +94,11 @@
         "hacienda_p12_required": "Upload a .p12 certificate before live Hacienda emit.",
         "hacienda_sign_failed": "Could not sign the FE XML ({error}).",
         "hacienda_sign_required": "Live Hacienda emit requires a successful XAdES signature.",
+        "inbound_xml_invalid": "Could not parse the inbound FE XML ({error}).",
+        "inbound_clave_exists": "An inbound document with this clave already exists.",
+        "inbound_already_answered": "This inbound document already has an accept/reject submission.",
+        "inbound_reject_reason_required": "Provide a rejection reason before rejecting at Hacienda.",
+        "inbound_not_submitted": "Accept or reject the document before verifying Hacienda status.",
         "invoice_no_lines": "Add at least one line before issuing the invoice.",
         "invoice_due_date_required": "A due date is required when issuing a credit (crédito) invoice.",
         "invoice_has_payments": "Void is blocked while the invoice has recorded payments.",

@@ -134,3 +134,18 @@ class HaciendaCredentialUpsert(BaseModel):
     pin: Optional[str] = Field(default=None, max_length=64)
     oauth_client_id: Optional[str] = Field(default=None, max_length=255)
     oauth_client_secret: Optional[str] = Field(default=None, max_length=512)
+
+
+class InboundDocumentCreate(BaseModel):
+    xml: str = Field(min_length=20)
+    supplier_id: Optional[UUID] = None
+    notes: Optional[str] = Field(default=None, max_length=2000)
+
+
+class InboundDocumentLink(BaseModel):
+    supplier_id: Optional[UUID] = None
+    notes: Optional[str] = Field(default=None, max_length=2000)
+
+
+class InboundRejectRequest(BaseModel):
+    reason: str = Field(min_length=3, max_length=80)
