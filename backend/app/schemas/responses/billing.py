@@ -117,6 +117,7 @@ class InvoiceListItem(BaseModel):
     amount_paid: Decimal
     balance_due: Decimal
     is_overdue: bool = False
+    hacienda_status: Optional[str] = None
     created_at: datetime
     updated_at: datetime
 

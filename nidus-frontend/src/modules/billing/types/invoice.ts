@@ -99,6 +99,7 @@ export interface InvoiceListItem {
   amount_paid: string;
   balance_due: string;
   is_overdue: boolean;
+  hacienda_status?: HaciendaStatus | "processing" | null;
   created_at: string;
   updated_at: string;
 }

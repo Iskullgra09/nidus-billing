@@ -133,11 +133,24 @@ export function InvoicesTable({
     setFiscal(fiscalResult.status === "success" ? fiscalResult.data ?? null : null);
   };
 
+  const canEmitHacienda = (haciendaStatus?: string | null) =>
+    !haciendaStatus ||
+    haciendaStatus === "rejected" ||
+    haciendaStatus === "error" ||
+    haciendaStatus === "pending";
+
+  const haciendaBadgeVariant = (status: string) => {
+    if (status === "rejected" || status === "error") return "destructive";
+    if (status === "accepted") return "default";
+    return "secondary";
+  };
+
   const handleEmitHacienda = async (row: InvoiceListItem) => {
     const result = await emitInvoiceFiscalAction(row.id);
     if (result.status === "success") {
       toast.success(result.message);
       if (detailOpen && selected?.id === row.id) await refreshFiscal(row.id);
+      router.refresh();
     } else toast.error(result.message);
   };
 
@@ -146,6 +159,7 @@ export function InvoicesTable({
     if (result.status === "success") {
       toast.success(result.message);
       if (detailOpen && selected?.id === row.id) await refreshFiscal(row.id);
+      router.refresh();
     } else toast.error(result.message);
   };
 
@@ -240,6 +254,11 @@ export function InvoicesTable({
       cell: (row) => (
         <div className="flex flex-wrap justify-center gap-1">
           <Badge variant={statusVariant(row.status)}>{t(`status.${row.status}`)}</Badge>
+          {row.hacienda_status && (
+            <Badge variant={haciendaBadgeVariant(row.hacienda_status)}>
+              {t(`haciendaStatus.${row.hacienda_status}`)}
+            </Badge>
+          )}
           {row.is_overdue && <Badge variant="destructive">{t("overdueBadge")}</Badge>}
         </div>
       ),
@@ -311,16 +330,21 @@ export function InvoicesTable({
                   row.status === "partial" ||
                   row.status === "paid") && (
                   <>
-                    <DropdownMenuItem onClick={() => void handleEmitHacienda(row)}>
-                      <Stamp className="size-4" />
-                      {t("emitHaciendaAction")}
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      onClick={() => void handleVerifyHacienda(row)}
-                    >
-                      <RefreshCw className="size-4" />
-                      {t("verifyHaciendaAction")}
-                    </DropdownMenuItem>
+                    {canEmitHacienda(row.hacienda_status) && (
+                      <DropdownMenuItem onClick={() => void handleEmitHacienda(row)}>
+                        <Stamp className="size-4" />
+                        {t("emitHaciendaAction")}
+                      </DropdownMenuItem>
+                    )}
+                    {row.hacienda_status &&
+                      row.hacienda_status !== "pending" && (
+                        <DropdownMenuItem
+                          onClick={() => void handleVerifyHacienda(row)}
+                        >
+                          <RefreshCw className="size-4" />
+                          {t("verifyHaciendaAction")}
+                        </DropdownMenuItem>
+                      )}
                     <DropdownMenuItem
                       onClick={() => setPromptTarget({ kind: "email", row })}
                     >
