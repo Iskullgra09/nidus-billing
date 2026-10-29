@@ -1,5 +1,5 @@
 ﻿"""
-Nidus Core demo seed — multi-org sandbox for local / Docker.
+Nidus Billing demo seed — multi-org sandbox for local / Docker.
 
 Uses DATABASE_ADMIN_URL (bypasses RLS). Idempotent. Password: password123
 
@@ -240,7 +240,7 @@ async def _ensure_pending_invite(
 def _print_summary() -> None:
     print("")
     print("=" * 72)
-    print("Nidus Core demo seed ready")
+    print("Nidus Billing demo seed ready")
     print(f"Password for all accounts: {DEMO_PASSWORD}")
     print("=" * 72)
     print("")

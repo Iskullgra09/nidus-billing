@@ -23,7 +23,7 @@ configure_logging()
 app = FastAPI(
     title=settings.PROJECT_NAME,
     version="1.0.0",
-    description="NIDUS Core Multitenant API",
+    description="Nidus Billing Multitenant API",
 )
 
 _media_root = Path(settings.MEDIA_ROOT)
@@ -52,7 +52,7 @@ app.include_router(api_router, prefix=settings.API_V1_STR)
 async def root():
     return {
         "project": settings.PROJECT_NAME,
-        "message": "NIDUS Core is running",
+        "message": "Nidus Billing is running",
         "docs": "/docs",
         "version": "v1",
     }

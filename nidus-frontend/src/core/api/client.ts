@@ -2,7 +2,7 @@ import { getLocale } from "next-intl/server";
 import { GenericResponse } from "@/core/types/api";
 
 const BASE_URL =
-  process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1";
+  process.env.NEXT_PUBLIC_API_URL || "http://localhost:8001/api/v1";
 
 export type FetchOptions = RequestInit & {
   params?: Record<string, string | number | boolean | null | undefined>;

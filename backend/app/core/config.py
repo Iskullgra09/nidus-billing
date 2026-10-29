@@ -13,7 +13,7 @@ ENV_PATH = ROOT_DIR / ".env"
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=str(ENV_PATH), env_ignore_empty=True, extra="ignore")
 
-    PROJECT_NAME: str = "NIDUS Core API"
+    PROJECT_NAME: str = "Nidus Billing API"
     ENVIRONMENT: str = "development"
     API_V1_STR: str = "/api/v1"
 
@@ -22,9 +22,9 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 7
 
     POSTGRES_SERVER: str = "localhost"
-    POSTGRES_PORT: int = 5444
-    POSTGRES_DB: str = "nidus_core"
-    POSTGRES_TEST_DB: str = "nidus_core_test"
+    POSTGRES_PORT: int = 5445
+    POSTGRES_DB: str = "nidus_billing"
+    POSTGRES_TEST_DB: str = "nidus_billing_test"
 
     APP_USER: str
     APP_PASSWORD: str
@@ -48,7 +48,7 @@ class Settings(BaseSettings):
     SMTP_PORT: int = 587
     SMTP_USER: str = ""
     SMTP_PASSWORD: str = ""
-    EMAIL_FROM_NAME: str = "Nidus"
+    EMAIL_FROM_NAME: str = "Nidus Billing"
     EMAIL_FROM_ADDRESS: str = "noreply@niduslabs.com"
 
     @computed_field

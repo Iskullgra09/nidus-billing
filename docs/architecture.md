@@ -204,8 +204,8 @@ Testing a multitenant system with PostgreSQL RLS requires verifying that restric
 
 ### Decision
 1. **Dual-Engine Setup:** Implemented two distinct engines in `conftest.py`:
-   - `admin_engine`: Uses `nidus_admin` credentials pointing to the **`nidus_core_test`** database. Bypasses RLS for `TRUNCATE` and `SEED` operations.
-   - `app_engine`: Uses `nidus_app_user` credentials. Strictly follows RLS policies. Used for all API integration tests.
+   - `admin_engine`: Uses `nidus_billing_admin` credentials pointing to the **`nidus_billing_test`** database. Bypasses RLS for `TRUNCATE` and `SEED` operations.
+   - `app_engine`: Uses `nidus_billing_app` credentials. Strictly follows RLS policies. Used for all API integration tests.
 2. **Context Bypass for Verification:** To verify DB state during tests without using the admin engine, we utilize the `SET LOCAL app.current_organization_id = ''` bypass within an explicit `session.begin()` block.
 
 ### Consequences
@@ -320,10 +320,10 @@ Adding users directly to an organization requires sensitive data (passwords) and
 In a monorepo structure, managing secrets across multiple services (Backend, Database, and future Frontend) often leads to "secret drift" and accidental hardcoding. Our initial setup had `.env` files duplicated or misplaced, making Docker synchronization and Pydantic validation brittle.
 
 ### Decision
-1. **Single Source of Truth:** Moved the primary `.env` file to the **Project Root** (`nidus-core/`).
+1. **Single Source of Truth:** Moved the primary `.env` file to the **Project Root** (`nidus-billing/`).
 2. **Dynamic Path Resolution:** Implemented a robust `BASE_DIR` calculation in `app/core/config.py` using `Path(__file__).resolve()` to ensure the backend can locate the root `.env` regardless of where the process is started.
 3. **Pydantic Validation:** Standardized on `pydantic-settings` to enforce that all critical infrastructure variables (Passwords, Secret Keys, DB Names) are present and correctly typed at startup. The application will now fail-fast if a secret is missing.
-4. **Naming Convention:** Standardized the test database name as **`nidus_core_test`** to maintain consistency with the production/dev `nidus_core` naming scheme.
+4. **Naming Convention:** Standardized the test database name as **`nidus_billing_test`** to maintain consistency with the production/dev `nidus_billing` naming scheme.
 
 ### Consequences
 * **Positive:** Absolute protection against hardcoded secrets. Simplified Docker Compose orchestration as it now reads from the same file as the Python application.
@@ -886,13 +886,13 @@ Modern SaaS platforms require high collaboration. Users must be able to share UR
 **Status:** Accepted
 
 ### Context
-Integration tests truncate and seed data before every test case. When `conftest.py` pointed the application engine at `DATABASE_URL` (the development database `nidus_core`), pytest polluted real dev data with `test-*@nidus.com` users and phantom organizations.
+Integration tests truncate and seed data before every test case. When `conftest.py` pointed the application engine at `DATABASE_URL` (the development database `nidus_billing`), pytest polluted real dev data with `test-*@nidus.com` users and phantom organizations.
 
 ### Decision
-1. **Dual Database URLs:** Introduced `TEST_APP_DATABASE_URL` (`nidus_app_user` → `POSTGRES_TEST_DB`) and retained `TEST_DATABASE_URL` (`nidus_admin` → `POSTGRES_TEST_DB`).
+1. **Dual Database URLs:** Introduced `TEST_APP_DATABASE_URL` (`nidus_billing_app` → `POSTGRES_TEST_DB`) and retained `TEST_DATABASE_URL` (`nidus_billing_admin` → `POSTGRES_TEST_DB`).
 2. **Strict Test Engines:** `conftest.py` binds both pytest engines exclusively to the test database. A startup guard raises if the app engine does not target `POSTGRES_TEST_DB`.
 3. **Dual Migration Path:** Development migrations use `DATABASE_ADMIN_URL`. Test schema is applied via `scripts/migrate_test_db.py` (sets `ALEMBIC_DATABASE_URL`).
-4. **Runtime Unchanged:** FastAPI in local dev continues using `nidus_core` via `DATABASE_URL`. RLS dual-role semantics (`nidus_admin` vs `nidus_app_user`) apply identically on both databases.
+4. **Runtime Unchanged:** FastAPI in local dev continues using `nidus_billing` via `DATABASE_URL`. RLS dual-role semantics (`nidus_billing_admin` vs `nidus_billing_app`) apply identically on both databases.
 
 ### Consequences
 * **Positive:** Dev and test are fully isolated. pytest can truncate aggressively without touching Mailtrap/onboarding data.
@@ -1132,3 +1132,27 @@ PRs only ran backend pytest. Frontend regressions (lint/types) could merge unnot
 ### Consequences
 * **Positive:** FE quality gates on every PR; auditors get a settings surface without new APIs.
 * **Negative:** No FE unit/e2e suite yet - typecheck/lint only until tests exist.
+
+---
+
+## ADR B-001: Nidus Billing Product Fork Identifiers
+
+**Date:** 2026-10-29
+**Status:** Accepted
+
+### Context
+This repo is a product fork of Nidus Core. Identical DB names, roles, and container names would collide when Core and Billing run on the same machine.
+
+### Decision
+1. **Product identity:** Visible product name is **Nidus Billing** (API title, FE metadata, email from-name). License remains **AGPL-3.0**.
+2. **Databases:** `nidus_billing` (dev) and `nidus_billing_test` (pytest/CI).
+3. **Roles:** `nidus_billing_admin` (migrations / bypass RLS) and `nidus_billing_app` (runtime RLS). Dual-role + RLS pattern unchanged from Core.
+4. **Compose:** Project `nidus-billing`; containers `nidus-billing-postgres` and `nidus-billing-api`.
+5. **Default host ports:** Postgres `5445`, API `8001`, FE `3001` (Core keeps `5444` / `8000` / `3000`).
+6. **Repo boundary:** Billing domain stays here. Platform fixes may sync via `upstream` (`nidus-core`). Vertical billing must never be pushed into Core.
+
+### Consequences
+* **Positive:** Side-by-side local stacks; clear product/platform split.
+* **Negative:** Fresh volumes after rename; Core ADR history (001–059) remains platform origin, not Billing product roadmap.
+
+Product phases and Hacienda/email design land in later Billing ADRs (`B-002+`) when those slices are implemented — not in this ADR.

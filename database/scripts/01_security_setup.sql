@@ -1,9 +1,9 @@
--- NIDUS CORE - GLOBAL SECURITY & RLS SETUP
+-- NIDUS BILLING - GLOBAL SECURITY & RLS SETUP
 
 -- 1. CLEANUP & SCHEMA PERMISSIONS
-GRANT USAGE ON SCHEMA public TO nidus_app_user;
-GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO nidus_app_user;
-GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO nidus_app_user;
+GRANT USAGE ON SCHEMA public TO nidus_billing_app;
+GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO nidus_billing_app;
+GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO nidus_billing_app;
 
 -- 2. ENABLE RLS
 ALTER TABLE organization ENABLE ROW LEVEL SECURITY;
@@ -16,7 +16,7 @@ ALTER TABLE "user" ENABLE ROW LEVEL SECURITY;
 -- ORGANIZATION
 DROP POLICY IF EXISTS organization_isolation_policy ON organization;
 CREATE POLICY organization_isolation_policy ON organization
-    AS PERMISSIVE FOR ALL TO nidus_app_user
+    AS PERMISSIVE FOR ALL TO nidus_billing_app
     USING (
         (id::text = current_setting('app.current_organization_id', TRUE))
         OR 
@@ -27,7 +27,7 @@ CREATE POLICY organization_isolation_policy ON organization
 -- MEMBER
 DROP POLICY IF EXISTS member_isolation_policy ON member;
 CREATE POLICY member_isolation_policy ON member
-    AS PERMISSIVE FOR ALL TO nidus_app_user
+    AS PERMISSIVE FOR ALL TO nidus_billing_app
     USING (
         (organization_id::text = current_setting('app.current_organization_id', TRUE))
         OR 
@@ -38,14 +38,14 @@ CREATE POLICY member_isolation_policy ON member
 -- ROLE
 DROP POLICY IF EXISTS role_isolation_policy ON role;
 CREATE POLICY role_isolation_policy ON role
-    AS PERMISSIVE FOR ALL TO nidus_app_user
+    AS PERMISSIVE FOR ALL TO nidus_billing_app
     USING (true)
     WITH CHECK (true);
 
 -- USER
 DROP POLICY IF EXISTS user_isolation_policy ON "user";
 CREATE POLICY user_isolation_policy ON "user"
-    AS PERMISSIVE FOR ALL TO nidus_app_user
+    AS PERMISSIVE FOR ALL TO nidus_billing_app
     USING (
         (id::text = current_setting('app.current_user_id', TRUE))
         OR 

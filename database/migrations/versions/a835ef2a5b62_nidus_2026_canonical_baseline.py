@@ -218,12 +218,12 @@ def upgrade() -> None:
             op.f(f"ix_{table}_deleted_at"), table, ["deleted_at"], unique=False
         )
 
-    op.execute("GRANT USAGE ON SCHEMA public TO nidus_app_user;")
+    op.execute("GRANT USAGE ON SCHEMA public TO nidus_billing_app;")
     op.execute(
-        "GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO nidus_app_user;"
+        "GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO nidus_billing_app;"
     )
     op.execute(
-        "GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO nidus_app_user;"
+        "GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO nidus_billing_app;"
     )
 
     secure_tables = ["organization", "member", "role", '"user"', "invitation"]
@@ -231,12 +231,12 @@ def upgrade() -> None:
         op.execute(f"ALTER TABLE {table} ENABLE ROW LEVEL SECURITY;")
 
     op.execute("""
-        CREATE POLICY organization_isolation_policy ON organization AS PERMISSIVE FOR ALL TO nidus_app_user
+        CREATE POLICY organization_isolation_policy ON organization AS PERMISSIVE FOR ALL TO nidus_billing_app
         USING (id::text = current_setting('app.current_organization_id', TRUE) OR current_setting('app.current_organization_id', TRUE) = '');
     """)
 
     op.execute("""
-        CREATE POLICY user_isolation_policy ON "user" AS PERMISSIVE FOR ALL TO nidus_app_user
+        CREATE POLICY user_isolation_policy ON "user" AS PERMISSIVE FOR ALL TO nidus_billing_app
         USING (
             id::text = current_setting('app.current_user_id', TRUE) 
             OR current_setting('app.current_organization_id', TRUE) = ''
@@ -250,7 +250,7 @@ def upgrade() -> None:
 
     for t_table in ["member", "role", "invitation"]:
         op.execute(f"""
-            CREATE POLICY {t_table}_isolation_policy ON {t_table} AS PERMISSIVE FOR ALL TO nidus_app_user
+            CREATE POLICY {t_table}_isolation_policy ON {t_table} AS PERMISSIVE FOR ALL TO nidus_billing_app
             USING (organization_id::text = current_setting('app.current_organization_id', TRUE) OR current_setting('app.current_organization_id', TRUE) = '');
         """)
 

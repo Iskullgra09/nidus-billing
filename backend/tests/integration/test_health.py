@@ -10,5 +10,5 @@ async def test_health_check(async_client: httpx.AsyncClient):
 
     data = response.json()
     assert "message" in data
-    assert data["message"] == "NIDUS Core is running"
+    assert data["message"] == "Nidus Billing is running"
     assert data["version"] == "v1"
