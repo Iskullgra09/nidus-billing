@@ -11,8 +11,14 @@ from app.core.pagination import paginate_with_cursor
 from app.models.audit import AuditAction, AuditResourceType
 from app.models.billing.customer import Customer
 from app.models.billing.document_series import DocumentSeries
-from app.models.billing.enums import DocumentSeriesType, InvoiceStatus, PaymentCondition
+from app.models.billing.enums import (
+    DocumentSeriesType,
+    InvoiceStatus,
+    PaymentCondition,
+    tax_rate_to_mh_code,
+)
 from app.models.billing.invoice import Invoice, InvoiceLine
+from app.models.billing.invoice_fiscal import InvoiceFiscal
 from app.models.billing.item import Item
 from app.models.billing.payment import InvoicePayment
 from app.schemas.filters.billing import InvoiceFilter
@@ -88,7 +94,11 @@ class InvoiceService:
         )
 
     @staticmethod
-    def _to_list_item(invoice: Invoice, customer_name: str | None) -> InvoiceListItem:
+    def _to_list_item(
+        invoice: Invoice,
+        customer_name: str | None,
+        hacienda_status: str | None = None,
+    ) -> InvoiceListItem:
         return InvoiceListItem(
             id=invoice.id,
             organization_id=invoice.organization_id,
@@ -107,6 +117,7 @@ class InvoiceService:
             amount_paid=invoice.amount_paid,
             balance_due=invoice.balance_due,
             is_overdue=InvoiceService._is_overdue(invoice),
+            hacienda_status=hacienda_status,
             created_at=invoice.created_at,
             updated_at=invoice.updated_at,
         )
@@ -244,6 +255,10 @@ class InvoiceService:
                     tax_rate = item.tax_rate
 
             line_subtotal, line_tax, line_total = InvoiceService._line_amounts(quantity, unit_price, tax_rate)
+            tax_code = (raw.tax_code or tax_rate_to_mh_code(
+                float(tax_rate) if tax_rate is not None else None
+            )).zfill(2)[:2]
+            cabys_code = raw.cabys_code.strip() if raw.cabys_code else None
             built.append(
                 InvoiceLine(
                     organization_id=org_id,
@@ -256,6 +271,8 @@ class InvoiceService:
                     quantity=quantity,
                     unit_price=unit_price,
                     tax_rate=tax_rate,
+                    tax_code=tax_code,
+                    cabys_code=cabys_code,
                     line_subtotal=line_subtotal,
                     line_tax=line_tax,
                     line_total=line_total,
@@ -319,7 +336,25 @@ class InvoiceService:
             ).all()
             names = {row[0]: row[1] for row in name_rows}
 
-        items = [InvoiceService._to_list_item(row, names.get(row.customer_id)) for row in rows]
+        fiscal_by_invoice: dict[UUID, str] = {}
+        invoice_ids = [row.id for row in rows]
+        if invoice_ids:
+            Fiscal = cast(Any, InvoiceFiscal)
+            fiscal_rows = (
+                await session.execute(
+                    select(Fiscal.invoice_id, Fiscal.status).where(Fiscal.invoice_id.in_(invoice_ids))
+                )
+            ).all()
+            fiscal_by_invoice = {row[0]: row[1] for row in fiscal_rows}
+
+        items = [
+            InvoiceService._to_list_item(
+                row,
+                names.get(row.customer_id),
+                fiscal_by_invoice.get(row.id),
+            )
+            for row in rows
+        ]
         return CursorPage(items=items, page_info=PageInfo(has_next_page=has_next, end_cursor=end_cursor))
 
     @staticmethod
@@ -330,7 +365,7 @@ class InvoiceService:
             customer_id=customer.id,
             payment_condition=data.payment_condition.value,
             status=InvoiceStatus.DRAFT.value,
-            currency=data.currency.upper(),
+            currency=data.currency.value,
             reference_number=data.reference_number.strip() if data.reference_number else None,
             notes=data.notes,
             due_date=data.due_date,
@@ -387,7 +422,8 @@ class InvoiceService:
             invoice.reference_number = ref.strip() if ref else None
             del payload["reference_number"]
         if "currency" in payload and payload["currency"] is not None:
-            invoice.currency = payload["currency"].upper()
+            currency = payload["currency"]
+            invoice.currency = currency.value if hasattr(currency, "value") else str(currency).upper()
             del payload["currency"]
         for key, value in payload.items():
             if key == "lines":

@@ -8,15 +8,18 @@ import { NidusScope } from "@/shared/access/scopes";
 import { Badge } from "@/shared/ui/badge";
 import { Button } from "@/shared/ui/button";
 import { formatMoney, formatPercent } from "../lib/format";
-import { Invoice, InvoiceEmailDelivery } from "../types/invoice";
+import { Invoice, InvoiceEmailDelivery, InvoiceFiscal } from "../types/invoice";
 
 interface InvoiceDetailDialogProps {
   isOpen: boolean;
   onClose: (open: boolean) => void;
   invoice: Invoice | null;
   emailDeliveries?: InvoiceEmailDelivery[];
+  fiscal?: InvoiceFiscal | null;
   onEditDraft?: (invoice: Invoice) => void;
   onSendEmail?: () => void;
+  onEmitHacienda?: () => void;
+  onVerifyHacienda?: () => void;
 }
 
 export function InvoiceDetailDialog({
@@ -24,12 +27,21 @@ export function InvoiceDetailDialog({
   onClose,
   invoice,
   emailDeliveries = [],
+  fiscal = null,
   onEditDraft,
   onSendEmail,
+  onEmitHacienda,
+  onVerifyHacienda,
 }: InvoiceDetailDialogProps) {
   const t = useTranslations("BillingInvoices");
 
   if (!invoice) return null;
+
+  const canEmitHacienda =
+    invoice.status === "issued" ||
+    invoice.status === "partial" ||
+    invoice.status === "paid";
+  const fiscalStatus = fiscal?.status;
 
   const docLabel =
     invoice.document_number ||
@@ -58,12 +70,29 @@ export function InvoiceDetailDialog({
                 >
                   {t(`status.${invoice.status}`)}
                 </Badge>
+                {fiscalStatus && (
+                  <Badge
+                    variant={
+                      fiscalStatus === "rejected" || fiscalStatus === "error"
+                        ? "destructive"
+                        : fiscalStatus === "accepted"
+                          ? "default"
+                          : "secondary"
+                    }
+                  >
+                    {t(`haciendaStatus.${fiscalStatus}`)}
+                  </Badge>
+                )}
                 {invoice.is_overdue && (
                   <Badge variant="destructive">{t("overdueBadge")}</Badge>
                 )}
               </div>
             </div>
             <dl className="text-sm space-y-1 text-right min-w-40">
+              <div>
+                <dt className="text-muted-foreground inline">{t("fieldCurrency")}: </dt>
+                <dd className="inline font-medium">{invoice.currency}</dd>
+              </div>
               <div>
                 <dt className="text-muted-foreground inline">{t("fieldPaymentCondition")}: </dt>
                 <dd className="inline font-medium">{t(invoice.payment_condition)}</dd>
@@ -244,6 +273,41 @@ export function InvoiceDetailDialog({
 
           <section className="px-6 py-4 border-t">
             <h4 className="text-xs uppercase tracking-wide text-muted-foreground mb-3">
+              {t("haciendaTitle")}
+            </h4>
+            {!fiscal ? (
+              <p className="text-sm text-muted-foreground">{t("haciendaEmpty")}</p>
+            ) : (
+              <dl className="grid gap-2 text-sm sm:grid-cols-2">
+                <div>
+                  <dt className="text-muted-foreground">{t("haciendaClave")}</dt>
+                  <dd className="font-mono text-xs break-all">
+                    {fiscal.clave || "—"}
+                  </dd>
+                </div>
+                <div>
+                  <dt className="text-muted-foreground">{t("haciendaConsecutive")}</dt>
+                  <dd className="font-mono text-xs">
+                    {fiscal.consecutive || "—"}
+                  </dd>
+                </div>
+                {fiscal.mh_message && (
+                  <div className="sm:col-span-2">
+                    <dt className="text-muted-foreground">{t("haciendaMessage")}</dt>
+                    <dd className="text-muted-foreground">{fiscal.mh_message}</dd>
+                  </div>
+                )}
+                {fiscal.mock_mode && (
+                  <div className="sm:col-span-2">
+                    <Badge variant="secondary">{t("haciendaMock")}</Badge>
+                  </div>
+                )}
+              </dl>
+            )}
+          </section>
+
+          <section className="px-6 py-4 border-t">
+            <h4 className="text-xs uppercase tracking-wide text-muted-foreground mb-3">
               {t("emailsTitle")}
             </h4>
             {emailDeliveries.length === 0 ? (
@@ -273,7 +337,25 @@ export function InvoiceDetailDialog({
           </section>
         </article>
 
-        <div className="flex justify-end gap-2">
+        <div className="flex flex-wrap justify-end gap-2">
+          {canEmitHacienda &&
+            onEmitHacienda &&
+            (!fiscalStatus ||
+              fiscalStatus === "rejected" ||
+              fiscalStatus === "error") && (
+            <CanAccess scope={NidusScope.INVOICE_WRITE}>
+              <Button type="button" variant="secondary" onClick={onEmitHacienda}>
+                {t("emitHaciendaAction")}
+              </Button>
+            </CanAccess>
+          )}
+          {fiscal?.clave && onVerifyHacienda && (
+            <CanAccess scope={NidusScope.INVOICE_WRITE}>
+              <Button type="button" variant="secondary" onClick={onVerifyHacienda}>
+                {t("verifyHaciendaAction")}
+              </Button>
+            </CanAccess>
+          )}
           {onSendEmail && (
             <CanAccess scope={NidusScope.INVOICE_WRITE}>
               <Button type="button" variant="secondary" onClick={onSendEmail}>

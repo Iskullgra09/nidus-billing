@@ -8,6 +8,7 @@ import { useSearchParams } from "next/navigation";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/shared/ui/tabs";
 import { MembersTable } from "@/modules/organization/components/members-table";
 import { PendingInvitationsTable } from "@/modules/organization/components/pending-invitations-table";
+import { InviteMemberButton } from "@/modules/organization/components/invite-member-button";
 import { MemberResponse } from "@/modules/organization/types/members";
 import { RoleResponse } from "@/modules/access/types/roles";
 import { InvitationResponse } from "@/modules/access/types/invitation";
@@ -60,16 +61,15 @@ export function MembersWorkspace({
       </TabsList>
 
       <TabsContent value="members" className="space-y-4">
-        <div className="rounded-md border bg-card shadow-sm p-4">
-          <MembersTable
-            members={members}
-            roles={roles}
-            currentUserId={currentUserId}
-            pageInfo={pageInfo}
-            searchQuery={searchQuery}
-            pageSize={pageSize}
-          />
-        </div>
+        <MembersTable
+          members={members}
+          roles={roles}
+          currentUserId={currentUserId}
+          pageInfo={pageInfo}
+          searchQuery={searchQuery}
+          pageSize={pageSize}
+          toolbarAction={<InviteMemberButton roles={roles} />}
+        />
       </TabsContent>
 
       <TabsContent value="invitations" className="space-y-4">

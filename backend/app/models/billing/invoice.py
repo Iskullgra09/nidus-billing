@@ -74,6 +74,10 @@ class Invoice(UUIDMixin, TimestampMixin, SoftDeleteMixin, TenantMixin, table=Tru
             "status IN ('draft', 'issued', 'partial', 'paid', 'void')",
             name="ck_invoice_status",
         ),
+        sa.CheckConstraint(
+            "currency IN ('CRC', 'USD')",
+            name="ck_invoice_currency",
+        ),
     )
 
 
@@ -98,6 +102,8 @@ class InvoiceLine(UUIDMixin, TimestampMixin, TenantMixin, table=True):
         default=None,
         sa_column=sa.Column(sa.Numeric(7, 4), nullable=True),
     )
+    tax_code: Optional[str] = Field(default=None, max_length=2)
+    cabys_code: Optional[str] = Field(default=None, max_length=16)
     line_subtotal: Decimal = Field(
         default=Decimal("0"),
         sa_column=sa.Column(sa.Numeric(18, 4), nullable=False, server_default="0"),

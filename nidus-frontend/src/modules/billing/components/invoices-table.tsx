@@ -13,7 +13,9 @@ import {
   MoreHorizontal,
   Pencil,
   Plus,
+  RefreshCw,
   Send,
+  Stamp,
   Trash2,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -33,7 +35,12 @@ import { CanAccess } from "@/modules/access/components/can-access";
 import { NidusScope } from "@/shared/access/scopes";
 import { formatMoney } from "../lib/format";
 import { Party, PageInfo } from "../types/party";
-import { Invoice, InvoiceEmailDelivery, InvoiceListItem } from "../types/invoice";
+import {
+  Invoice,
+  InvoiceEmailDelivery,
+  InvoiceFiscal,
+  InvoiceListItem,
+} from "../types/invoice";
 import { InvoiceDetailDialog } from "./invoice-detail-dialog";
 import { InvoiceFormDialog } from "./invoice-form-dialog";
 import {
@@ -41,11 +48,14 @@ import {
   createInvoicePaymentAction,
   deleteInvoiceAction,
   downloadInvoicePdfAction,
+  emitInvoiceFiscalAction,
   getInvoiceAction,
   getInvoiceEmailsAction,
+  getInvoiceFiscalAction,
   issueInvoiceAction,
   sendInvoiceEmailAction,
   updateInvoiceAction,
+  verifyInvoiceFiscalAction,
   voidInvoiceAction,
 } from "../actions/invoices";
 
@@ -74,6 +84,7 @@ export function InvoicesTable({
   const [emailDeliveries, setEmailDeliveries] = React.useState<InvoiceEmailDelivery[]>(
     [],
   );
+  const [fiscal, setFiscal] = React.useState<InvoiceFiscal | null>(null);
   const [confirmTarget, setConfirmTarget] = React.useState<{
     kind: "delete" | "void";
     row: InvoiceListItem;
@@ -107,10 +118,49 @@ export function InvoicesTable({
   const openView = async (row: InvoiceListItem) => {
     const full = await loadInvoice(row);
     if (!full) return;
-    const emails = await getInvoiceEmailsAction(row.id);
+    const [emails, fiscalResult] = await Promise.all([
+      getInvoiceEmailsAction(row.id),
+      getInvoiceFiscalAction(row.id),
+    ]);
     setSelected(full);
     setEmailDeliveries(emails);
+    setFiscal(fiscalResult.status === "success" ? fiscalResult.data ?? null : null);
     setDetailOpen(true);
+  };
+
+  const refreshFiscal = async (invoiceId: string) => {
+    const fiscalResult = await getInvoiceFiscalAction(invoiceId);
+    setFiscal(fiscalResult.status === "success" ? fiscalResult.data ?? null : null);
+  };
+
+  const canEmitHacienda = (haciendaStatus?: string | null) =>
+    !haciendaStatus ||
+    haciendaStatus === "rejected" ||
+    haciendaStatus === "error" ||
+    haciendaStatus === "pending";
+
+  const haciendaBadgeVariant = (status: string) => {
+    if (status === "rejected" || status === "error") return "destructive";
+    if (status === "accepted") return "default";
+    return "secondary";
+  };
+
+  const handleEmitHacienda = async (row: InvoiceListItem) => {
+    const result = await emitInvoiceFiscalAction(row.id);
+    if (result.status === "success") {
+      toast.success(result.message);
+      if (detailOpen && selected?.id === row.id) await refreshFiscal(row.id);
+      router.refresh();
+    } else toast.error(result.message);
+  };
+
+  const handleVerifyHacienda = async (row: InvoiceListItem) => {
+    const result = await verifyInvoiceFiscalAction(row.id);
+    if (result.status === "success") {
+      toast.success(result.message);
+      if (detailOpen && selected?.id === row.id) await refreshFiscal(row.id);
+      router.refresh();
+    } else toast.error(result.message);
   };
 
   const openEdit = async (row: InvoiceListItem) => {
@@ -204,6 +254,11 @@ export function InvoicesTable({
       cell: (row) => (
         <div className="flex flex-wrap justify-center gap-1">
           <Badge variant={statusVariant(row.status)}>{t(`status.${row.status}`)}</Badge>
+          {row.hacienda_status && (
+            <Badge variant={haciendaBadgeVariant(row.hacienda_status)}>
+              {t(`haciendaStatus.${row.hacienda_status}`)}
+            </Badge>
+          )}
           {row.is_overdue && <Badge variant="destructive">{t("overdueBadge")}</Badge>}
         </div>
       ),
@@ -274,12 +329,29 @@ export function InvoicesTable({
                 {(row.status === "issued" ||
                   row.status === "partial" ||
                   row.status === "paid") && (
-                  <DropdownMenuItem
-                    onClick={() => setPromptTarget({ kind: "email", row })}
-                  >
-                    <Mail className="size-4" />
-                    {t("emailAction")}
-                  </DropdownMenuItem>
+                  <>
+                    {canEmitHacienda(row.hacienda_status) && (
+                      <DropdownMenuItem onClick={() => void handleEmitHacienda(row)}>
+                        <Stamp className="size-4" />
+                        {t("emitHaciendaAction")}
+                      </DropdownMenuItem>
+                    )}
+                    {row.hacienda_status &&
+                      row.hacienda_status !== "pending" && (
+                        <DropdownMenuItem
+                          onClick={() => void handleVerifyHacienda(row)}
+                        >
+                          <RefreshCw className="size-4" />
+                          {t("verifyHaciendaAction")}
+                        </DropdownMenuItem>
+                      )}
+                    <DropdownMenuItem
+                      onClick={() => setPromptTarget({ kind: "email", row })}
+                    >
+                      <Mail className="size-4" />
+                      {t("emailAction")}
+                    </DropdownMenuItem>
+                  </>
                 )}
                 {(row.status === "issued" || row.status === "partial") && (
                   <>
@@ -310,15 +382,6 @@ export function InvoicesTable({
 
   return (
     <div className="space-y-4">
-      <div className="flex justify-end">
-        <CanAccess scope={NidusScope.INVOICE_WRITE}>
-          <Button type="button" onClick={openCreate}>
-            <Plus className="size-4" />
-            {t("createButton")}
-          </Button>
-        </CanAccess>
-      </div>
-
       <DataTable
         mode="cursor"
         columns={columns}
@@ -330,6 +393,14 @@ export function InvoicesTable({
         isFirstPage={!searchParams.get("cursor")}
         initialSearch={searchQuery}
         onRowClick={(row) => void openView(row)}
+        toolbarAction={
+          <CanAccess scope={NidusScope.INVOICE_WRITE}>
+            <Button type="button" size="sm" onClick={openCreate}>
+              <Plus className="size-4" />
+              {t("createButton")}
+            </Button>
+          </CanAccess>
+        }
         onSearchChange={(query) => {
           const next = query.trim();
           if (next === searchQuery) return;
@@ -357,7 +428,18 @@ export function InvoicesTable({
         onClose={setDetailOpen}
         invoice={selected}
         emailDeliveries={emailDeliveries}
+        fiscal={fiscal}
         onEditDraft={openEditFromDetail}
+        onEmitHacienda={
+          selected
+            ? () => void handleEmitHacienda(selected)
+            : undefined
+        }
+        onVerifyHacienda={
+          selected
+            ? () => void handleVerifyHacienda(selected)
+            : undefined
+        }
         onSendEmail={
           selected &&
           (selected.status === "issued" ||

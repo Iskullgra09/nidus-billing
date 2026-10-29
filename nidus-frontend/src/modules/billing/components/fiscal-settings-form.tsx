@@ -144,8 +144,8 @@ export function FiscalSettingsForm({
   };
 
   return (
-    <div className="space-y-10">
-      <form onSubmit={(e) => void saveProfile(e)} className="space-y-4 max-w-2xl">
+    <div className="max-w-3xl space-y-10">
+      <form onSubmit={(e) => void saveProfile(e)} className="space-y-4">
         <div>
           <h3 className="text-base font-semibold">{t("profileTitle")}</h3>
           <p className="text-sm text-muted-foreground">{t("profileDescription")}</p>
@@ -268,7 +268,7 @@ export function FiscalSettingsForm({
 
       <form
         onSubmit={(e) => void saveCredentials(e)}
-        className="space-y-4 max-w-2xl border-t border-border/70 pt-8"
+        className="space-y-4 border-t border-border/70 pt-8"
       >
         <div>
           <h3 className="text-base font-semibold">{t("credentialsTitle")}</h3>

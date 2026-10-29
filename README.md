@@ -49,19 +49,23 @@ Phases are **product slices**, not Core’s old Phase 1–16 list. Status update
 | **B2** | Operational docs (contado/crédito) + PDF | Done |
 | **B3** | Numbering, payments & balances | Done |
 | **B4** | Outbound email (send invoice) | Done |
-| **B5** | Org fiscal profile & Hacienda credentials | In progress |
-| **B6** | Hacienda outbound (emit + verify) | Planned |
+| **B5** | Org fiscal profile & Hacienda credentials | Done |
+| **B6** | Hacienda outbound (emit + verify), CRC/USD whitelist, tax codes for XML | Done (mock emit; live XAdES gated) |
+| **B6.1** | XAdES signer + sandbox live path; USD rate on FE; CABYS UI mínimo | Next |
 | **B7** | Hacienda inbound (receive / accept-reject) | Planned |
 | **B8** | Inbound email mailbox (load supplier invoices) | Planned |
-| **B9** | Hardening, UX polish, domain tests | Planned |
+| **B9** | Hardening, UX polish, quotes→invoice, domain tests | Planned |
+| **B10** | FX / BCCR rates + multi-currency AR reports | Planned |
+| **B11** | Party enrichment (multi contact / address) | Planned |
 
 ```text
-B0 → B1 → B2 → B3 → B4
-              ↘
-               B5 → B6 → B7 → B8 → B9
+B0 → B1 → B2 → B3 → B4 → B5 → B6 → B6.1 → B7 → B8 → B9
+                                                    ↘→ B10 FX (BCCR / reports)
+                                                    ↘→ B11 parties
+Add-ons (post-core): AP/OC, inventory, payroll, subscriptions, treasury
 ```
 
-Operational billing (B1–B4) can ship value before fiscal/Hacienda. Email send (B4) uses existing SMTP; Hacienda (B5–B7) and mailbox ingest (B8) build on that.
+Operational billing (B1–B4) ships value before fiscal/Hacienda. B5 stores issuer identity and encrypted credentials. B6–B8 are the Hacienda critical path (B6.1 closes outbound before inbound). B9–B11 harden product quality after emit/receive work.
 
 ### B0 — Brand & side-by-side runtime
 
@@ -97,15 +101,29 @@ Operational billing (B1–B4) can ship value before fiscal/Hacienda. Email send 
 
 **Backend:** CR fiscal fields per org (nombre, cédula/juridica, actividad económica, sucursal, etc.); encrypted store for `.p12` / API OAuth secrets; never commit secrets. Scopes `billing:fiscal:read|write` on Admin/Owner.  
 **Frontend:** Organization → Fiscal / Hacienda settings UI.  
-**Security:** app-role cannot read raw private keys in logs/audit metadata.  
+**Security:** app-role cannot read raw private keys in logs/audit metadata. Local/dev may fall back to a hash of `SECRET_KEY`; **production must set `CREDENTIALS_ENCRYPTION_KEY`**.  
 **Existing orgs:** re-run `uv run seed.py` (or edit Admin role scopes) so Admin picks up `billing:fiscal:*`; then re-login.  
-**Out of scope:** live Hacienda calls (B6); CRC/USD currency UI / FX (see backlog).
+**Out of scope:** live Hacienda calls (B6); currency whitelist / FX (B6 / B10).
 
 ### B6 — Hacienda outbound (emit + verify)
 
-**Backend:** build XML 4.4; sign; submit sandbox → prod; persist **clave numérica**, submission id, Hacienda response; status sync (aceptada / rechazada / procesando); **verify** action so the UI proves the document is linked to Hacienda; credit/debit notes as needed for corrections.  
-**Frontend:** emit flow, Hacienda status badge, verify/detail panel, error surfacing.  
-**Out of scope:** supplier reception (B7).
+**Backend:** `invoice_fiscal` beside the operational invoice; FE XML **4.4**; mock XAdES + mock MH client when `HACIENDA_LIVE=false`; persist **clave** (50 digits), consecutive, XML, MH status; **verify** polls/mock-accepts. Live submit gated by flag + B5 credentials (ATV pin → IdP password).  
+**Currency:** whitelist **CRC | USD** (no FX engine yet).  
+**Tax:** line `tax_code` (+ `cabys_code` column) for XML; `%` still for operational totals.  
+**Frontend:** emit/verify actions, Hacienda badge + detail panel, currency selector.  
+**ADR:** B-008 (dual operational + fiscal status); B-009 (test ladder + B6.1 scope).  
+**Done when:** mock emit/verify end-to-end; clave persisted; UI surfaces fiscal status.  
+**Not done here:** real XAdES, sandbox MH calls, USD `TipoCambio` on FE, CABYS picker UI.
+
+### B6.1 — Close outbound (signer, sandbox, USD rate, CABYS mínimo)
+
+**Goal:** safe path to real MH **sandbox** without jumping to B7/B8 or full B10.
+
+1. **XAdES-EPES** signer using org `.p12` (no mock marker when live).
+2. **Test ladder:** local mock (default) → MH sandbox with ATV test credentials → production only with real org + `HACIENDA_LIVE`.
+3. **USD on FE:** `exchange_rate` (+ rate date) on the invoice when `currency=USD` for XML `TipoCambio`; manual or simple fetch — **not** BCCR history/reports (those stay **B10**).
+4. **CABYS mínimo:** require/select `cabys_code` on lines (and optional default on items) so emit is MH-ready; rich CABYS catalog sync can wait (B9 / later note).
+5. **Out of scope:** supplier reception (**B7**), inbound mailbox (**B8**), NC/ND full flows, BCCR multi-currency AR (**B10**).
 
 ### B7 — Hacienda inbound (receive / accept-reject)
 
@@ -124,8 +142,20 @@ Operational billing (B1–B4) can ship value before fiscal/Hacienda. Email send 
 ### B9 — Hardening, UX polish, domain tests
 
 **Backend:** domain audit events; rate limits on emit/send/credential paths; pytest coverage for billing services & Hacienda adapter fakes.  
-**Frontend:** dashboard widgets (open AR, recent emits, Hacienda failures); Cmd+K completeness; EN/ES polish; empty/error states; invoice document-style detail polish.  
+**Frontend:** dashboard widgets (open AR, recent emits, Hacienda failures); Cmd+K completeness; EN/ES polish; empty/error states; richer invoice document UX (full-page route, print CSS); **quotes → invoice**; sparse in-app guidance on hard concepts (statuses, contado/crédito, issue vs void).  
 **Quality:** CI keeps backend + frontend gates; add billing-focused specs as modules land.
+
+### B10 — FX / tipo de cambio
+
+**Backend:** BCCR (or configured) rates, rate date on documents, conversion helpers; multi-currency AR reporting.  
+**Frontend:** rate display, reports that mix CRC and USD without lying about balances.  
+**Boundary:** B6.1 may store a **document** exchange rate for FE XML when USD; B10 owns automatic BCCR sync and reporting that mixes CRC/USD without lying about balances.
+
+### B11 — Party enrichment
+
+**Backend:** multi phone / multi address on customers and suppliers (billing vs shipping) when fiscal or logistics need it.  
+**Frontend:** party detail editors beyond a single phone/email.  
+**Out of scope:** expanding party schema during B1–B5 (flat contact fields stay until this phase).
 
 ### Creation & ingest channels (how invoices enter the system)
 
@@ -167,27 +197,24 @@ These are **commercial / AR** states on `invoice.status`. They are **not** Hacie
 
 **Invoice vs “transaction”:** in this product, the sales document is `invoice` (AR). Cash movement is `invoice_payment` (not a second invoice type). Full journal / GL “transactions” are out of scope until accounting add-ons. Hacienda emit/annul is a **parallel fiscal lifecycle** (B6), not a replacement of these operational states.
 
-### Backlog notes (capture, not in current PR)
+### Backlog notes (not yet a numbered phase)
 
-Ideas raised during B2/B3 UX that belong later — keep here so they are not lost:
+Promoted: CRC|USD + tax codes → **B6**; dual operational+fiscal → **B6** (ADR B-008); XAdES + sandbox + USD rate on FE + CABYS UI mínimo → **B6.1** (ADR B-009); BCCR FX/reports → **B10**; party multi-contact → **B11**; richer invoice UX / quotes→invoice → **B9**.
 
-- **Multi-currency (CRC + USD):** Costa Rica tenants often invoice in colones and dollars. Today `invoice.currency` defaults to `CRC` with no UI whitelist or FX. Next step: allow **CRC | USD** on invoices (no automatic conversion). **FX / tipo de cambio** (BCCR rates, rate date, multi-currency AR reports) is a later slice — do **not** fold into B5 fiscal profile.
-- **Tax catalog / multi-rate lines:** codes beyond a single `%` per line (IVA 1/2/4/13, exento, turismo, retenciones). Fits fiscal depth around **B5–B6**, not rewriting B2 money fields now.
-- **Richer invoice UX:** full-page document route, print CSS, line editor closer to paper invoice; polish in **B9**.
-- **Quotes → invoice:** optional conversion path under operational docs / B9.
+Still parked (no phase yet):
+
 - **Accounting ledger / journal:** explicit non-goal until add-ons; balances stay AR cash application (B3).
-- **Import sales drafts from XML/file:** possible helper before Hacienda; prefer aligning with B6/B8 parsers rather than a one-off upload.
-- **Multi contact / address on parties:** today one optional `phone` (+ email) on customer/supplier. Do **not** expand to `party_phone` / `party_address` tables in B2/B3. Schedule as party enrichment (around **B5** fiscal profile or **B9** polish) when Hacienda needs billing vs shipping addresses and multiple phones.
-- **Dual status model (operational + fiscal):** keep `invoice.status` as above; add Hacienda status on `invoice_fiscal` (aceptada / rechazada / anulada ante MH). Void in UI may later mean “commercial void” and/or “nota de crédito / anulación Hacienda” — ADR when B6 starts.
-- **In-app guidance:** contextual help for complex surfaces (invoice statuses, credit vs cash, issue vs void) — tooltips / short coach marks / help panel. Prefer sparse help on hard concepts, not every control. Schedule under **B9** UX polish (optional small ADR B-006 later).
+- **Import sales drafts from XML/file:** prefer aligning with B6/B8 parsers rather than a one-off upload helper.
+- **Rich CABYS catalog sync** (search/sync MH codes beyond line field + item default): after B6.1 mínimo; not B7.
+- **NC/ND emit workflows:** after outbound FE is solid (post B6.1).
 
 ---
 
 ## Product packaging: core vs add-ons
 
-**Core (roadmap B0–B9):** customers/suppliers/catalog, **sales** invoices (AR), payments & balances, PDF/email, Costa Rica Hacienda emit/receive/mailbox.
+**Core (roadmap B0–B11):** customers/suppliers/catalog, **sales** invoices (AR), payments & balances, PDF/email, Costa Rica Hacienda emit/receive/mailbox, CRC|USD whitelist, FX later, party enrichment.
 
-**Add-ons (post-B9, not in the critical path):** purchase orders, supplier bills (AP), inventory/kardex, payroll (planillas), subscriptions, bank transfers/treasury. These get their own tables, scopes, and nav — never a boolean on `invoice`.
+**Add-ons (post-core, not in the critical path):** purchase orders, supplier bills (AP), inventory/kardex, payroll (planillas), subscriptions, bank transfers/treasury. These get their own tables, scopes, and nav — never a boolean on `invoice`.
 
 See ADR B-005 in `docs/architecture.md`.
 

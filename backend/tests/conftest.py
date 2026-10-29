@@ -99,6 +99,7 @@ async def cleanup_and_seed() -> None:
             tables_to_truncate: List[str] = [
                 "audit_log",
                 "invoice_email_delivery",
+                "invoice_fiscal",
                 "invoice_payment",
                 "invoice_line",
                 "invoice",
@@ -106,6 +107,8 @@ async def cleanup_and_seed() -> None:
                 "item",
                 "customer",
                 "supplier",
+                "organization_hacienda_credential",
+                "organization_fiscal_profile",
                 "invitation",
                 "member",
                 "role",

@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { useTranslations } from "next-intl";
-import { MoreHorizontal, Pencil, Plus, Trash2 } from "lucide-react";
+import { MoreHorizontal, Pencil, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/shared/ui/button";
@@ -22,6 +22,7 @@ import { RoleResponse } from "../types/roles";
 import { ScopeResponse } from "../types/scopes-catalog";
 import { deleteRoleAction } from "../actions/roles";
 import { RoleFormDialog } from "./role-form-dialog";
+import { CreateRoleButton } from "./create-role-button";
 
 interface RolesTableProps {
   roles: RoleResponse[];
@@ -37,11 +38,6 @@ export function RolesTable({ roles, scopes }: RolesTableProps) {
   const [deleteTarget, setDeleteTarget] = React.useState<RoleResponse | null>(
     null,
   );
-
-  const openCreate = () => {
-    setSelectedRole(null);
-    setDialogOpen(true);
-  };
 
   const openEdit = (role: RoleResponse) => {
     setSelectedRole(role);
@@ -129,15 +125,6 @@ export function RolesTable({ roles, scopes }: RolesTableProps) {
 
   return (
     <>
-      <div className="mb-4 flex justify-end">
-        <CanAccess scope={NidusScope.ROLE_WRITE}>
-          <Button size="sm" onClick={openCreate}>
-            <Plus className="mr-2 h-4 w-4" />
-            {t("createRoleButton")}
-          </Button>
-        </CanAccess>
-      </div>
-
       <DataTable
         mode="client"
         data={roles}
@@ -146,6 +133,7 @@ export function RolesTable({ roles, scopes }: RolesTableProps) {
         searchPlaceholder={t("searchPlaceholder")}
         emptyMessage={t("noRolesFound")}
         pageSize={8}
+        toolbarAction={<CreateRoleButton scopes={scopes} />}
       />
 
       <RoleFormDialog

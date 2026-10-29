@@ -64,7 +64,10 @@
         "fiscal_profile_updated": "Perfil fiscal guardado exitosamente.",
         "hacienda_credentials_retrieved": "Estado de credenciales de Hacienda recuperado exitosamente.",
         "hacienda_credentials_updated": "Credenciales de Hacienda guardadas exitosamente.",
-        "hacienda_credentials_deleted": "Credenciales de Hacienda eliminadas exitosamente."
+        "hacienda_credentials_deleted": "Credenciales de Hacienda eliminadas exitosamente.",
+        "invoice_fiscal_retrieved": "Estado fiscal de Hacienda recuperado exitosamente.",
+        "invoice_fiscal_emitted": "Factura enviada a Hacienda exitosamente.",
+        "invoice_fiscal_verified": "Estado de Hacienda actualizado exitosamente."
     },
     "billing": {
         "customer_tax_id_conflict": "Ya existe un cliente con el tax id '{tax_id}' en esta organización.",
@@ -72,6 +75,13 @@
         "item_sku_conflict": "Ya existe un ítem con el SKU '{sku}' en esta organización.",
         "invoice_not_draft": "Solo las facturas en borrador se pueden modificar o eliminar.",
         "invoice_not_issued": "Solo facturas emitidas o parciales se pueden anular.",
+        "invoice_must_be_issued": "Emite la factura operativa antes de enviarla a Hacienda.",
+        "invoice_void": "Las facturas anuladas no se pueden enviar a Hacienda.",
+        "invoice_already_emitted": "Esta factura ya tiene un envío activo a Hacienda.",
+        "fiscal_profile_required": "Configura el perfil fiscal de la organización antes de emitir.",
+        "customer_tax_id_required": "El tax id del cliente es obligatorio para emitir a Hacienda.",
+        "invoice_lines_required": "Se requieren líneas de factura para construir el XML de Hacienda.",
+        "fiscal_clave_required": "Emite la factura antes de verificar el estado en Hacienda.",
         "invoice_no_lines": "Agrega al menos una línea antes de emitir la factura.",
         "invoice_due_date_required": "La fecha de vencimiento es obligatoria al emitir una factura a crédito.",
         "invoice_has_payments": "No se puede anular mientras la factura tenga pagos registrados.",

@@ -29,6 +29,7 @@ from app.schemas.responses.billing import (
     FiscalProfileResponse,
     HaciendaCredentialStatusResponse,
     InvoiceEmailDeliveryResponse,
+    InvoiceFiscalResponse,
     InvoiceListItem,
     InvoicePaymentResponse,
     InvoiceResponse,
@@ -39,6 +40,7 @@ from app.schemas.responses.pagination import CursorPage
 from app.services.billing import (
     CustomerService,
     FiscalService,
+    HaciendaEmitService,
     InvoiceEmailService,
     InvoiceService,
     ItemService,
@@ -382,6 +384,61 @@ async def void_invoice(
 ):
     invoice = await InvoiceService.void_invoice(session, invoice_id)
     return GenericResponse(data=invoice, message=i18n.t("success.invoice_voided", lang=lang))
+
+
+@router.get(
+    "/invoices/{invoice_id}/fiscal",
+    response_model=GenericResponse[Optional[InvoiceFiscalResponse]],
+    dependencies=[Depends(ScopeGuard(NidusScope.INVOICE_READ))],
+)
+async def get_invoice_fiscal(
+    invoice_id: UUID,
+    session: AsyncSession = Depends(get_current_tenant_session),
+    lang: str = Depends(get_language),
+):
+    data = await HaciendaEmitService.get_for_invoice(session, invoice_id)
+    return GenericResponse(
+        data=data,
+        message=i18n.t("success.invoice_fiscal_retrieved", lang=lang),
+    )
+
+
+@router.post(
+    "/invoices/{invoice_id}/emit-hacienda",
+    response_model=GenericResponse[InvoiceFiscalResponse],
+    dependencies=[
+        Depends(ScopeGuard(NidusScope.INVOICE_WRITE)),
+        Depends(RateLimit("billing.invoice_emit", tier="strict")),
+    ],
+)
+async def emit_invoice_hacienda(
+    invoice_id: UUID,
+    session: AsyncSession = Depends(get_current_tenant_session),
+    payload: dict[str, Any] = Depends(get_jwt_payload),
+    lang: str = Depends(get_language),
+):
+    org_id = _require_org_id(payload)
+    data = await HaciendaEmitService.emit(session, org_id, invoice_id)
+    return GenericResponse(data=data, message=i18n.t("success.invoice_fiscal_emitted", lang=lang))
+
+
+@router.post(
+    "/invoices/{invoice_id}/verify-hacienda",
+    response_model=GenericResponse[InvoiceFiscalResponse],
+    dependencies=[
+        Depends(ScopeGuard(NidusScope.INVOICE_WRITE)),
+        Depends(RateLimit("billing.invoice_verify", tier="strict")),
+    ],
+)
+async def verify_invoice_hacienda(
+    invoice_id: UUID,
+    session: AsyncSession = Depends(get_current_tenant_session),
+    payload: dict[str, Any] = Depends(get_jwt_payload),
+    lang: str = Depends(get_language),
+):
+    org_id = _require_org_id(payload)
+    data = await HaciendaEmitService.verify(session, org_id, invoice_id)
+    return GenericResponse(data=data, message=i18n.t("success.invoice_fiscal_verified", lang=lang))
 
 
 @router.get(

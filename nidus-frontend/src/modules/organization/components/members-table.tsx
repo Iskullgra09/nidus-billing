@@ -37,6 +37,7 @@ interface MembersTableProps {
   pageInfo: PageInfo;
   searchQuery: string;
   pageSize?: number;
+  toolbarAction?: React.ReactNode;
 }
 
 export function MembersTable({
@@ -46,6 +47,7 @@ export function MembersTable({
   pageInfo,
   searchQuery,
   pageSize = 10,
+  toolbarAction,
 }: MembersTableProps) {
   const t = useTranslations("SettingsMembers");
   const router = useRouter();
@@ -187,6 +189,7 @@ export function MembersTable({
         hasNextPage={pageInfo.has_next_page}
         isFirstPage={!searchParams.get("cursor")}
         rowCountLabel={t("pageRowCount", { count: members.length })}
+        toolbarAction={toolbarAction}
         onSearchChange={(query) => {
           const next = query.trim();
           if (next === searchQuery) return;

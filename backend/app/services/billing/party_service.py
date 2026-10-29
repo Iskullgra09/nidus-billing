@@ -98,15 +98,20 @@ class _PartyCRUD:
 
     async def create(self, session: AsyncSession, org_id: UUID, data: PartyCreate) -> PartyResponse:
         await self._assert_tax_id_unique(session, org_id, data.tax_id)
-        row = self.model(
-            organization_id=org_id,
-            name=data.name.strip(),
-            email=str(data.email) if data.email else None,
-            phone=data.phone,
-            tax_id=data.tax_id.strip() if data.tax_id else None,
-            notes=data.notes,
-            is_active=data.is_active,
-        )
+        row_kwargs: dict = {
+            "organization_id": org_id,
+            "name": data.name.strip(),
+            "email": str(data.email) if data.email else None,
+            "phone": data.phone,
+            "tax_id": data.tax_id.strip() if data.tax_id else None,
+            "notes": data.notes,
+            "is_active": data.is_active,
+        }
+        if hasattr(self.model, "model_fields") and "identification_type" in self.model.model_fields:
+            row_kwargs["identification_type"] = (
+                data.identification_type.value if data.identification_type else None
+            )
+        row = self.model(**row_kwargs)
         session.add(row)
         await session.flush()
         await AuditService.record(
@@ -143,6 +148,11 @@ class _PartyCRUD:
             await self._assert_tax_id_unique(session, row.organization_id, tax_id, exclude_id=party_id)
             row.tax_id = tax_id
             del payload["tax_id"]
+        if "identification_type" in payload:
+            if hasattr(row, "identification_type"):
+                value = payload["identification_type"]
+                row.identification_type = value.value if hasattr(value, "value") else value
+            del payload["identification_type"]
         if "name" in payload and payload["name"] is not None:
             row.name = payload["name"].strip()
             del payload["name"]

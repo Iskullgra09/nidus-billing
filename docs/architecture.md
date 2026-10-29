@@ -1232,16 +1232,16 @@ Issued invoices need commercial consecutive numbers and cash application (AR) be
 **Status:** Accepted
 
 ### Context
-Nidus Billing will eventually offer adjacent products (purchases/OC, inventory, payroll, subscriptions, treasury). Stuffing those into `invoice` or the B0–B9 critical path would blur AR vs AP and slow Hacienda delivery.
+Nidus Billing will eventually offer adjacent products (purchases/OC, inventory, payroll, subscriptions, treasury). Stuffing those into `invoice` or the B0–B11 critical path would blur AR vs AP and slow Hacienda delivery.
 
 ### Decision
-1. **Core (B0–B9):** sales master data, operational sales invoices, payments/balances, outbound email, CR Hacienda emit/receive/mailbox.
+1. **Core (B0–B11):** sales master data, operational sales invoices, payments/balances, outbound email, CR Hacienda emit/receive/mailbox, CRC|USD whitelist (B6), FX (B10), party enrichment (B11).
 2. **`invoice` means sales AR only.** Never add `is_purchase`; inbound supplier documents use dedicated models (B7+).
-3. **Add-ons (post-B9):** purchase orders, AP bills/payments, inventory, payroll, subscriptions, bank transfers — gated later via scopes / org module flags; separate tables and nav entries.
-4. **Fiscal layer:** Hacienda types (FE/TE/NC/ND) attach beside the operational invoice (future `invoice_fiscal`), not by rewriting B2 headers.
+3. **Add-ons (post-core):** purchase orders, AP bills/payments, inventory, payroll, subscriptions, bank transfers — gated later via scopes / org module flags; separate tables and nav entries.
+4. **Fiscal layer:** Hacienda types (FE/TE/NC/ND) attach beside the operational invoice (`invoice_fiscal` in B6), not by rewriting B2 headers.
 5. **Ingest channels stay phased:** manual drafts (B2), outbound email (B4), Hacienda XML (B6–B7), mailbox (B8). Do not invent a parallel “upload anything” path that bypasses those phases.
-6. **Tax depth later:** B2/B3 keep one optional `tax_rate` % per line for operational totals. Multi-code tax catalogs / withholdings wait for fiscal work (B5–B6); document in README backlog until then.
-7. **Party contacts stay flat for now:** single optional `phone` / `email` on customer & supplier. Multi-phone / multi-address models wait for fiscal/shipping needs (B5/B9 backlog) — avoid premature normalization in B1–B3.
+6. **Tax depth:** B2/B3 keep one optional `tax_rate` % per line for operational totals. Multi-code tax catalogs needed for XML land in **B6**; withholdings/extra matrices stay out unless MH emit requires them.
+7. **Party contacts stay flat through B5:** single optional `phone` / `email` on customer & supplier. Multi-phone / multi-address models wait for **B11**.
 
 ### Consequences
 * **Positive:** Stable sales schema; clear product packaging later; product ideas park in README without schema churn.
@@ -1280,11 +1280,59 @@ B6 needs issuer identity and signing material before live Hacienda calls. Operat
 
 ### Decision
 1. **Typed tables** (RLS): `organization_fiscal_profile` (1:1 org) and `organization_hacienda_credential` (1:1 org).
-2. **Encrypt at rest** with Fernet (`CREDENTIALS_ENCRYPTION_KEY`, or SHA-256 of `SECRET_KEY` in local/dev only). Never return ciphertext to the client.
+2. **Encrypt at rest** with Fernet (`CREDENTIALS_ENCRYPTION_KEY`, or SHA-256 of `SECRET_KEY` in local/dev only). Production must set `CREDENTIALS_ENCRYPTION_KEY`. Never return ciphertext to the client.
 3. **API:** `GET/PUT /billing/fiscal-profile`; `GET/PUT/DELETE /billing/hacienda-credentials` (multipart for `.p12`). Status response only exposes booleans + non-secret metadata.
 4. **Scopes:** `billing:fiscal:read` / `billing:fiscal:write` (Admin/Owner). Audit actions without secret values.
-5. **Out of scope:** live Hacienda submit/verify (B6); FX / multi-currency engine (backlog).
+5. **Out of scope:** live Hacienda submit/verify (B6); CRC|USD whitelist (B6); FX / BCCR engine (B10).
 
 ### Consequences
 * **Positive:** Clear path for B6 signing; secrets isolated from org settings JSON.
 * **Negative:** Existing Admin roles need `billing:fiscal:*` (seeded for new orgs; existing DBs may need role scope refresh).
+
+---
+
+## ADR B-008: Dual Operational + Fiscal Lifecycle (Phase B6)
+
+**Date:** 2026-10-29
+**Status:** Accepted
+
+### Context
+Costa Rica electronic invoicing (MH) requires FE XML 4.4, a 50-digit `clave`, XAdES-EPES signing, and OAuth submit/verify against recepcion (sandbox/prod). Operational AR states (`draft` / `issued` / `partial` / `paid` / `void`) must stay separate from Hacienda aceptada/rechazada.
+
+### Decision
+1. **Parallel record:** `invoice_fiscal` (1:1 with `invoice`) stores clave, consecutive, XML, MH status, and response metadata. Operational `invoice.status` is unchanged by emit/verify.
+2. **XML 4.4:** Build `FacturaElectronica` against `cdn.comprobanteselectronicos.go.cr/xml-schemas/v4.4/facturaElectronica`. Currency whitelist **CRC | USD** (no FX). Line `tax_code` / CABYS required for MH; `%` still drives operational totals.
+3. **Emit path:** Allocate FE series → clave → unsigned XML → sign → submit. `HACIENDA_LIVE=false` (default) uses mock sign + mock MH client. Live gated by flag + org credentials (ATV pin as IdP password, OAuth client, `.p12` for future signer).
+4. **API:** `GET .../fiscal`, `POST .../emit-hacienda`, `POST .../verify-hacienda` under `invoice:read` / `invoice:write`. Re-emit allowed after `rejected` / `error`.
+5. **Out of scope:** live XAdES-EPES (stub until signer lands); NC/ND workflows beyond schema readiness; supplier reception (B7); BCCR FX (B10).
+
+### Consequences
+* **Positive:** Tenants can exercise emit/verify locally without MH; fiscal identity is auditable beside AR.
+* **Negative:** Mock acceptance ≠ legal validity; production needs real signer + `HACIENDA_LIVE` + credentials.
+
+---
+
+## ADR B-009: MH Test Ladder & B6.1 Outbound Close-Out
+
+**Date:** 2026-10-29
+**Status:** Accepted
+
+### Context
+B6 ships mock emit/verify so day-to-day development never depends on Ministerio de Hacienda. Closing a trustworthy outbound path needs a real XAdES signer, a safe sandbox practice, USD rate on FE XML, and usable CABYS on lines — without pulling in supplier inbox (B7), email ingest (B8), or full FX (B10).
+
+### Decision
+1. **Three environments**
+   - **Local mock** (`HACIENDA_LIVE=false`): default. Builds clave/XML, mock sign, mock submit/verify. No MH network calls.
+   - **MH sandbox:** org uses ATV **test** credentials + test `.p12`; `HACIENDA_LIVE=true` only against recepcion-sandbox. Emitter/receptor identities are the developer’s or the org’s test juridica — never invent third-party legal invoices.
+   - **Production MH:** real org fiscal profile, real credentials, real signer. Only after sandbox confidence.
+2. **B6.1 scope (same product line, new branch after B6 merge):** XAdES-EPES with stored `.p12`; document `exchange_rate` when `currency=USD` for XML; CABYS mínimo in UI (line + optional item default). Keep mock as default for CI/dev.
+3. **Explicit deferrals**
+   - BCCR auto rates + multi-currency AR reports → **B10**.
+   - Supplier accept/reject → **B7**.
+   - Inbound mailbox → **B8**.
+   - Rich CABYS catalog sync / NC-ND emit → later (document in roadmap; not B7).
+4. **Legal validity:** mock or unsigned live must never be marketed as “aceptada ante Hacienda”. UI already surfaces `mock_mode`.
+
+### Consequences
+* **Positive:** Clear safe testing story; B6 can merge while B6.1 finishes outbound.
+* **Negative:** Until B6.1, USD FE XML may omit `TipoCambio` and CABYS may be empty unless set via API.

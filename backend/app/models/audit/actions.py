@@ -47,6 +47,8 @@ class AuditAction(StrEnum):
     FISCAL_PROFILE_UPDATE = "fiscal_profile.update"
     HACIENDA_CREDENTIAL_UPDATE = "hacienda_credential.update"
     HACIENDA_CREDENTIAL_DELETE = "hacienda_credential.delete"
+    INVOICE_FISCAL_EMIT = "invoice_fiscal.emit"
+    INVOICE_FISCAL_VERIFY = "invoice_fiscal.verify"
 
 
 class AuditResourceType(StrEnum):
@@ -64,3 +66,4 @@ class AuditResourceType(StrEnum):
     INVOICE_EMAIL = "invoice_email"
     FISCAL_PROFILE = "fiscal_profile"
     HACIENDA_CREDENTIAL = "hacienda_credential"
+    INVOICE_FISCAL = "invoice_fiscal"

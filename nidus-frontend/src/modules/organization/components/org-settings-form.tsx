@@ -74,7 +74,7 @@ export function OrganizationSettingsForm({
   const initials = organization.name.substring(0, 2).toUpperCase();
 
   return (
-    <div className="space-y-6">
+    <div className="max-w-2xl space-y-6">
       <AvatarUpload
         imageUrl={organization.avatar_url}
         fallback={initials}
@@ -96,7 +96,7 @@ export function OrganizationSettingsForm({
     <Form {...form}>
       <form
         onSubmit={form.handleSubmit(onSubmit)}
-        className="space-y-5 max-w-md"
+        className="space-y-5"
       >
         <FormField
           control={form.control}
