@@ -9,6 +9,12 @@ export enum NidusScope {
   ROLE_READ = "identity:role:read",
   ROLE_WRITE = "identity:role:write",
   AUDIT_READ = "audit:read",
+  CUSTOMER_READ = "billing:customer:read",
+  CUSTOMER_WRITE = "billing:customer:write",
+  SUPPLIER_READ = "billing:supplier:read",
+  SUPPLIER_WRITE = "billing:supplier:write",
+  ITEM_READ = "billing:item:read",
+  ITEM_WRITE = "billing:item:write",
 }
 
 /** Assignable scopes mirrored from backend NidusScope (excluding SUPERADMIN). */

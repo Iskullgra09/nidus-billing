@@ -23,6 +23,18 @@ class AuditAction(StrEnum):
     MEMBER_ROLE_UPDATE = "member.role_update"
     MEMBER_REMOVE = "member.remove"
 
+    CUSTOMER_CREATE = "customer.create"
+    CUSTOMER_UPDATE = "customer.update"
+    CUSTOMER_DELETE = "customer.delete"
+
+    SUPPLIER_CREATE = "supplier.create"
+    SUPPLIER_UPDATE = "supplier.update"
+    SUPPLIER_DELETE = "supplier.delete"
+
+    ITEM_CREATE = "item.create"
+    ITEM_UPDATE = "item.update"
+    ITEM_DELETE = "item.delete"
+
 
 class AuditResourceType(StrEnum):
     ORGANIZATION = "organization"
@@ -31,3 +43,6 @@ class AuditResourceType(StrEnum):
     MEMBER = "member"
     USER = "user"
     SESSION = "session"
+    CUSTOMER = "customer"
+    SUPPLIER = "supplier"
+    ITEM = "item"

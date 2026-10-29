@@ -45,7 +45,7 @@ Phases are **product slices**, not Core’s old Phase 1–16 list. Status update
 | Phase | Focus | Status |
 | :---: | :--- | :--- |
 | **B0** | Brand & side-by-side runtime | Done |
-| **B1** | Parties & catalog | Planned |
+| **B1** | Parties & catalog | Done |
 | **B2** | Operational docs (contado/crédito) + PDF | Planned |
 | **B3** | Numbering, payments & balances | Planned |
 | **B4** | Outbound email (send invoice) | Planned |

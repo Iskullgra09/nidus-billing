@@ -32,7 +32,27 @@
         "valid_token": "El token de invitación es válido.",
         "audit_logs_retrieved": "Registros de auditoría obtenidos exitosamente.",
         "avatar_updated": "Avatar actualizado exitosamente.",
-        "avatar_removed": "Avatar eliminado exitosamente."
+        "avatar_removed": "Avatar eliminado exitosamente.",
+        "customers_retrieved": "Clientes obtenidos exitosamente.",
+        "customer_retrieved": "Cliente obtenido exitosamente.",
+        "customer_created": "Cliente creado exitosamente.",
+        "customer_updated": "Cliente actualizado exitosamente.",
+        "customer_deleted": "Cliente eliminado exitosamente.",
+        "suppliers_retrieved": "Proveedores obtenidos exitosamente.",
+        "supplier_retrieved": "Proveedor obtenido exitosamente.",
+        "supplier_created": "Proveedor creado exitosamente.",
+        "supplier_updated": "Proveedor actualizado exitosamente.",
+        "supplier_deleted": "Proveedor eliminado exitosamente.",
+        "items_retrieved": "Ítems del catálogo obtenidos exitosamente.",
+        "item_retrieved": "Ítem del catálogo obtenido exitosamente.",
+        "item_created": "Ítem del catálogo creado exitosamente.",
+        "item_updated": "Ítem del catálogo actualizado exitosamente.",
+        "item_deleted": "Ítem del catálogo eliminado exitosamente."
+    },
+    "billing": {
+        "customer_tax_id_conflict": "Ya existe un cliente con el tax id '{tax_id}' en esta organización.",
+        "supplier_tax_id_conflict": "Ya existe un proveedor con el tax id '{tax_id}' en esta organización.",
+        "item_sku_conflict": "Ya existe un ítem con el SKU '{sku}' en esta organización."
     },
     "media": {
         "invalid_type": "El avatar debe ser una imagen JPEG, PNG o WebP.",

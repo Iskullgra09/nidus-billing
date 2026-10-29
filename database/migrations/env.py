@@ -21,6 +21,9 @@ if backend_dir not in sys.path:
 
 from app.core.config import settings  # type: ignore
 from app.models.audit.audit_log import AuditLog  # type: ignore
+from app.models.billing.customer import Customer  # type: ignore
+from app.models.billing.item import Item  # type: ignore
+from app.models.billing.supplier import Supplier  # type: ignore
 from app.models.identity.invitation import Invitation  # type: ignore
 from app.models.identity.member import Member  # type: ignore
 from app.models.identity.role import Role  # type: ignore

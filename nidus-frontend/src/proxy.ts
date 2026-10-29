@@ -12,6 +12,9 @@ const ROUTE_PERMISSIONS: Record<string, NidusScope[]> = {
   "/settings/organization/roles": [NidusScope.ROLE_READ],
   "/settings/organization/members": [NidusScope.MEMBER_READ],
   "/settings/organization": [NidusScope.ORG_UPDATE],
+  "/billing/customers": [NidusScope.CUSTOMER_READ],
+  "/billing/suppliers": [NidusScope.SUPPLIER_READ],
+  "/billing/items": [NidusScope.ITEM_READ],
   "/org": [NidusScope.ORG_READ],
   "/dashboard": [],
 };
