@@ -1,4 +1,4 @@
-"""Structured JSON logging for Nidus Core (stdlib only — no extra deps)."""
+"""Structured JSON logging for Nidus Billing (stdlib only — no extra deps)."""
 
 from __future__ import annotations
 

@@ -10,4 +10,4 @@
 
 ## Screenshots / Logs
 ---
-*Nidus Core - Phase 1*
+*Nidus Billing — Branding*

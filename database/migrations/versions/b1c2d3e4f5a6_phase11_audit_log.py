@@ -47,11 +47,11 @@ def upgrade() -> None:
     op.create_index("ix_audit_log_org_created", "audit_log", ["organization_id", "id"], unique=False)
 
     # Append-only for app role: SELECT + INSERT only (no UPDATE/DELETE).
-    op.execute("GRANT SELECT, INSERT ON TABLE audit_log TO nidus_app_user;")
+    op.execute("GRANT SELECT, INSERT ON TABLE audit_log TO nidus_billing_app;")
 
     op.execute("ALTER TABLE audit_log ENABLE ROW LEVEL SECURITY;")
     op.execute("""
-        CREATE POLICY audit_log_isolation_policy ON audit_log AS PERMISSIVE FOR ALL TO nidus_app_user
+        CREATE POLICY audit_log_isolation_policy ON audit_log AS PERMISSIVE FOR ALL TO nidus_billing_app
         USING (
             organization_id::text = current_setting('app.current_organization_id', TRUE)
             OR current_setting('app.current_organization_id', TRUE) = ''

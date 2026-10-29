@@ -1,6 +1,6 @@
-﻿# Nidus Core
+﻿# Nidus Billing
 
-**The high-performance backbone for multitenant SaaS ecosystems.**
+**Complete multitenant billing for Costa Rica — operational invoices today, Hacienda e-invoice end-to-end.**
 
 ![Python 3.12+](https://img.shields.io/badge/python-3.12+-blue.svg)
 ![FastAPI](https://img.shields.io/badge/FastAPI-0.110+-009688.svg)
@@ -11,169 +11,148 @@
 ![Tailwind CSS](https://img.shields.io/badge/Tailwind-v4-38BDF8.svg)
 ![License](https://img.shields.io/badge/license-AGPL--3.0-blue.svg)
 
-Nidus is an enterprise-grade monorepo designed for massive scale. It implements **Pragmatic Modular Monolith** patterns with hardware-level data isolation using **PostgreSQL Row-Level Security (RLS)** and **JSONB Granular Authorization**.
+**Nidus Billing** is the first vertical product forked from [Nidus Core](https://github.com/Iskullgra09/nidus-core). It keeps the Core platform (IAM, tenants, RLS, Docker, FE shell) and builds a full billing system: parties, catalog, quotes, cash/credit invoices, PDF, email delivery, payments, fiscal org setup, and Costa Rica Hacienda (emit + receive + verify).
+
+Platform capabilities stay aligned with Core via `upstream`. **Never** push billing domain back into `nidus-core`.
 
 ---
 
-## Architectural Core
+## Product vision
 
-| Feature | Implementation |
-| :--- | :--- |
-| **Multitenancy** | Shared Schema + PostgreSQL RLS (Row-Level Security) |
-| **Identity & IAM** | Hierarchical Scopes + GIN Indexed JSONB Authorization |
-| **Persistence** | Async SQLModel + UUIDv7 Sequential Indexing |
-| **Security** | Dual-Role Database Strategy (Migration Admin vs. App User) |
-| **Reliability** | Global Soft-Delete & Timezone-Aware Temporal Mixins |
-| **Observability** | Structured JSON request logs + append-only `audit_log` (RLS) |
+A tenant can manage customers and suppliers, sell with **contado** or **crédito** documents, number and collect payments, email the invoice to the customer, prove Hacienda linkage (clave / acceptance status), and later ingest supplier e-invoices (API + mailbox) to accept or reject them — all under RLS, scopes, audit, and EN/ES UI inside `modules/billing/`, wired into shell (Cmd+K, settings, dashboard).
 
-### What belongs in Nidus Core (vs product forks)
-
-Nidus Core is the **clone-ready platform**. Product domains (inventory, transactions, office/ops) live in **downstream repos**, not here.
-
-| Layer (frontend) | Responsibility |
-| :--- | :--- |
-| `core/` | API client, i18n routing, theme - no feature imports |
-| `shared/access` | `NidusScope`, `grantsAccess` / `hasScope` (mirrors backend) |
-| `modules/identity` | Auth session, login/org switch, profile, password |
-| `modules/access` | Roles, invitations, `CanAccess` |
-| `modules/organization` | Tenant settings, members, org switcher, danger zone |
-| `modules/shell` | Authenticated chrome (`TopBar`, Command Palette) |
-
-Architecture decisions: `docs/architecture.md` (ADRs through 059 for Core completion).
+Lightweight **catalog** (items/services + price) lives here. Stock/kardex belongs in a future `nidus-inventory` product — not in this repo.
 
 ---
 
-## Roadmap Status
+## Product vs platform
+
+| Repo | Role |
+| :--- | :--- |
+| **`nidus-core`** | Clone-ready platform (auth, IAM, tenancy, shell, observability) |
+| **`nidus-billing`** (this repo) | Vertical product: full operational + fiscal billing |
+
+Inherited FE modules: `identity` / `access` / `organization` / `shell`. Domain UI: `modules/billing/`.
+
+Architecture decisions: `docs/architecture.md` (Core ADRs 001–059 = platform history; Billing ADRs = `B-xxx`, only when a concrete technical decision is made).
+
+---
+
+## Roadmap (Nidus Billing)
+
+Phases are **product slices**, not Core’s old Phase 1–16 list. Status updates as each branch lands.
 
 | Phase | Focus | Status |
 | :---: | :--- | :--- |
-| 1 | Data Engine (RLS, baseline migration, security setup) | Done |
-| 2 | Identity Base (JWT, BCrypt, atomic onboarding) | Done |
-| 3 | RBAC & Governance (hierarchical scopes, GIN JSONB) | Done |
-| 3.5 | Reliability (exception handlers, i18n, Pydantic 422) | Done |
-| 3.6 | Lifecycle & Mail (async email, invitations, password recovery) | Done |
-| 3.7 | Data Standard (UUIDv7 keyset pagination, soft-deletes) | Done |
-| 4 | Frontend Foundation & Auth Pipeline (Next.js) | Done |
-| 5 | Security & Access Loop (password reset, profile, preferences) | Done |
-| 6 | Tenant Collaboration (org settings, invites, members UI) | Done |
-| 7 | *(renumbered - see Phase 12)* | Moved |
-| 8 | Infrastructure & DevOps (CORS, health, test DB isolation) | Done |
-| 9 | Multi-Organization Sessions | Done |
-| 10 | IAM Completion & Frontend Module Boundaries | Done |
-| 11 | Observability & Audit | Done |
-| 12 | Premium UX (Cmd+K, live dashboard, URL-driven members) | Done |
-| 13 | DevEx & Containers (API image + compose) | Done |
-| 14 | Security Hardening | Done |
-| 15 | Avatars & Media | Done |
-| 16 | CI Frontend & Quality Gates | Done |
+| **B0** | Brand & side-by-side runtime | Done |
+| **B1** | Parties & catalog | Planned |
+| **B2** | Operational docs (contado/crédito) + PDF | Planned |
+| **B3** | Numbering, payments & balances | Planned |
+| **B4** | Outbound email (send invoice) | Planned |
+| **B5** | Org fiscal profile & Hacienda credentials | Planned |
+| **B6** | Hacienda outbound (emit + verify) | Planned |
+| **B7** | Hacienda inbound (receive / accept-reject) | Planned |
+| **B8** | Inbound email mailbox (load supplier invoices) | Planned |
+| **B9** | Hardening, UX polish, domain tests | Planned |
+
+```text
+B0 → B1 → B2 → B3 → B4
+              ↘
+               B5 → B6 → B7 → B8 → B9
+```
+
+Operational billing (B1–B4) can ship value before fiscal/Hacienda. Email send (B4) uses existing SMTP; Hacienda (B5–B7) and mailbox ingest (B8) build on that.
+
+### B0 — Brand & side-by-side runtime
+
+- Product named Nidus Billing; DB/roles/containers/ports distinct from Core.
+- Docker DB+API healthy; FE login against Billing API.
+- ADR B-001.
+
+### B1 — Parties & catalog
+
+**Backend:** customers + suppliers (proveedores); items/services (SKU, name, unit, price, tax hints); soft-delete; cursor pagination; scopes + RLS.  
+**Frontend:** `modules/billing/` CRUD lists (URL-as-state), empty states, Cmd+K entries, EN/ES.  
+**Out of scope:** stock, warehouses, kardex.
+
+### B2 — Operational documents (contado / crédito) + PDF
+
+**Backend:** quotes (optional); invoices with payment condition **contado** vs **crédito**; line items; operational status machine (draft → issued → … / void); PDF generation.  
+**Frontend:** create/edit invoice UX, status badges, PDF download/preview.  
+**Out of scope:** Hacienda XML, legal numbering series (B3/B6).
+
+### B3 — Numbering, payments & balances
+
+**Backend:** per-org document series / consecutive numbers; payments (full/partial); open balance; paid / partial / overdue / void.  
+**Frontend:** payment capture, balance on invoice list/detail.  
+**Out of scope:** full accounting ledger / journal entries.
+
+### B4 — Outbound email (send invoice)
+
+**Backend:** send issued invoice by email (PDF; later XML/clave when fiscal exists); delivery log per document; reuse Core SMTP settings.  
+**Frontend:** “Send email” action, resend, delivery status.  
+**Out of scope:** inbound mailbox (B8).
+
+### B5 — Org fiscal profile & Hacienda credentials
+
+**Backend:** CR fiscal fields per org (nombre, cédula/juridica, actividad económica, sucursal, etc.); encrypted store for `.p12` / API OAuth secrets; never commit secrets.  
+**Frontend:** Organization → Fiscal / Hacienda settings UI.  
+**Security:** app-role cannot read raw private keys in logs/audit metadata.  
+**Out of scope:** live Hacienda calls (B6).
+
+### B6 — Hacienda outbound (emit + verify)
+
+**Backend:** build XML 4.4; sign; submit sandbox → prod; persist **clave numérica**, submission id, Hacienda response; status sync (aceptada / rechazada / procesando); **verify** action so the UI proves the document is linked to Hacienda; credit/debit notes as needed for corrections.  
+**Frontend:** emit flow, Hacienda status badge, verify/detail panel, error surfacing.  
+**Out of scope:** supplier reception (B7).
+
+### B7 — Hacienda inbound (receive / accept-reject)
+
+**Backend:** pull or receive supplier e-documents; map to supplier; accept/reject workflow against Hacienda; store XML + status.  
+**Frontend:** inbox / bandeja, accept-reject actions, link to supplier record.  
+**Out of scope:** email-based ingest (B8).
+
+### B8 — Inbound email mailbox (load into the system)
+
+**Goal:** invoices that arrive by email (or are forwarded to a dedicated org inbox) are parsed and loaded as inbound documents for review.
+
+**Backend:** per-org inbound address or IMAP/webhook mailbox; parse attachments (XML preferred; PDF fallback metadata); dedupe by clave; create inbound draft linked to supplier when possible; notify tenant.  
+**Frontend:** mailbox settings, “imported from email” badge, triage into B7 accept/reject.  
+**Out of scope:** replacing Hacienda as source of truth — email is an ingest channel, verification still via Hacienda where applicable.
+
+### B9 — Hardening, UX polish, domain tests
+
+**Backend:** domain audit events; rate limits on emit/send/credential paths; pytest coverage for billing services & Hacienda adapter fakes.  
+**Frontend:** dashboard widgets (open AR, recent emits, Hacienda failures); Cmd+K completeness; EN/ES polish; empty/error states.  
+**Quality:** CI keeps backend + frontend gates; add billing-focused specs as modules land.
 
 ---
 
-## Completed Phases (detail)
+## Explicit non-goals (this product)
 
-### Phases 1-3.7 - Backend foundation
-
-- RLS policies, dual DB roles (`nidus_admin` / `nidus_app_user`), baseline Alembic migration.
-- JWT auth, BCrypt, atomic tenant onboarding.
-- Hierarchical `NidusScope`, role scopes in JSONB with GIN indexes, UUIDv7.
-- Global exception handlers, EN/ES i18n, translated validation errors.
-- Async email (`aiosmtplib`), invitation lifecycle, password recovery tokens.
-- Cursor/keyset pagination, cascading soft-deletes.
-
-### Phase 4 - Frontend foundation & auth
-
-- Edge proxy JWT session validation (`src/proxy.ts`).
-- Design system (Shadcn + Tailwind v4), Zod + React Hook Form.
-- Login/logout Server Actions with HttpOnly cookies.
-- `next-intl`, locale segments, tenant onboarding UI, Sonner toasts.
-
-### Phase 5 - Security & access loop
-
-- Forgot / reset password flows.
-- Profile settings; theme and language preference persistence.
-
-### Phase 6 - Tenant collaboration
-
-- Organization settings (name/slug).
-- Invitation dispatch, verify, and accept landing.
-- Members data tables with RBAC-aware actions.
-
-### Phase 8 - Infrastructure & DevOps
-
-- [x] CORS for frontend origin + localhost.
-- [x] Health check with DB connectivity probe.
-- [x] pytest isolated on `nidus_core_test` (never `nidus_core`).
-- [x] ADR 049: DB in Docker; primary DX keeps API/FE on host via `uv` / `pnpm`.
-
-### Phase 9 - Multi-organization sessions
-
-- [x] `GET /users/me/organizations`, `POST /auth/switch-org`, `POST /auth/select-org`.
-- [x] Org picker on login; TopBar org switcher.
-- [x] ADR 050.
-
-### Phase 10 - IAM completion & module boundaries
-
-- [x] Custom roles CRUD; invitations list/revoke; `NidusScope` FE/BE sync; roles UI.
-- [x] Backend: IAM service split, `GenericResponse` everywhere, JWT scope fast path, org path guard (ADR 052).
-- [x] Frontend: locale-safe routing, unified `grantsAccess`, `/organizations/me` + danger zone, modules `identity` / `access` / `organization` / `shell` (ADR 053).
-
-### Phase 11 - Observability & audit
-
-- [x] Structured JSON logging (`RequestContextMiddleware`, `X-Request-ID`).
-- [x] Append-only `audit_log` + RLS; `AuditService`; event wiring for auth/IAM/org.
-- [x] `GET /api/v1/audit-logs` gated by `audit:read` (ADR 054).
-
-### Phase 12 - Premium UX
-
-- [x] Command Palette (Cmd/Ctrl+K) in shell.
-- [x] Dashboard with real Core data (members, orgs, health, recent audit when scoped).
-- [x] Members URL tabs (`?tab=`) and cursor/search table (`?q=`, `?cursor=`).
-- [x] ADR 055.
-
-### Phase 13 - DevEx & containers
-
-- [x] Root `Dockerfile` for FastAPI (uv multi-stage, non-root user).
-- [x] `docker-compose.yml` API service fixed (build context, no broken bind mounts).
-- [x] Entrypoint waits for Postgres, runs `alembic upgrade head`, then starts uvicorn.
-- [x] Demo seed (`backend/seed.py`) - multi-org users/roles/invites; optional `SEED_DEMO=true`.
-- [x] ADR 056 - API container delivered; FE stays on host.
-
-### Phase 14 - Security hardening
-
-- [x] In-memory rate limiting on auth, onboarding, and invitation abuse paths (`429` + `Retry-After`).
-- [x] Session cookie hardening - shared HttpOnly / SameSite=Lax / Secure flags; no CSRF tokens (same-origin Server Actions).
-- [x] Deploy secrets checklist (`.env.example` + Operational section); ADR 057.
-
----
-
-### Phase 15 - Avatars & media
-
-- [x] User and organization avatar upload/storage (local `media/`, compose volume).
-- [x] Safe content-type limits (JPEG/PNG/WebP, 2MB) and `/media` URL serving; ADR 058.
-
-### Phase 16 - CI frontend & quality gates
-
-- [x] Frontend lint + typecheck job in GitHub Actions (`pnpm`).
-- [x] Backend pytest job kept on PRs to `main`.
-- [x] Audit log settings page (`audit:read`) + Cmd+K entry; ADR 059.
-- [x] README encoding cleanup (broken dash characters).
-
----
-
-## Upcoming Phases
-
-*(Core roadmap complete through Phase 16. Product forks add domain features.)*
+| Non-goal | Where it belongs |
+| :--- | :--- |
+| Stock / kardex / warehouses | Future `nidus-inventory` |
+| Full accounting / asientos | Separate product or later expansion |
+| Multi-country tax engines | Costa Rica first |
+| Billing domain inside Core | Never — keep forks clean |
 
 ---
 
 ## Database Strategy (Dual DB + Dual Role)
 
+Identifiers are **Billing-specific** so Core and Billing can run on the same machine:
+
 | Database | Purpose | App user | Admin user |
 | :--- | :--- | :--- | :--- |
-| **`nidus_core`** | Development & manual usage (login, invites, Mailtrap) | `nidus_app_user` (RLS enforced) | `nidus_admin` (migrations only) |
-| **`nidus_core_test`** | pytest & CI only - truncated before each test | `nidus_app_user` (RLS enforced) | `nidus_admin` (truncate/seed) |
+| **`nidus_billing`** | Development & manual usage | `nidus_billing_app` (RLS) | `nidus_billing_admin` (migrations) |
+| **`nidus_billing_test`** | pytest & CI only — truncated before each test | `nidus_billing_app` (RLS) | `nidus_billing_admin` (truncate/seed) |
 
-**Never run pytest against `nidus_core`.** The test suite uses `TEST_APP_DATABASE_URL` and `TEST_DATABASE_URL` automatically.
+**Never run pytest against `nidus_billing`.** The suite uses `TEST_APP_DATABASE_URL` / `TEST_DATABASE_URL`.
+
+Containers: `nidus-billing-postgres` / `nidus-billing-api` (Compose project `nidus-billing`).
+
+**Host ports (side-by-side with Core):** Postgres `5445`, API `8001`, FE `3001` (Core typically uses `5444` / `8000` / `3000`).
 
 ---
 
@@ -190,14 +169,15 @@ Before any shared or production deploy:
 - [ ] Keep `ALGORITHM=HS256` unless you intentionally change the JWT stack.
 - [ ] Use strong distinct `APP_PASSWORD` and `ADMIN_PASSWORD`.
 - [ ] Set `FRONTEND_URL` to the real HTTPS origin (CORS + email links).
-- [ ] Configure real SMTP credentials (or an approved relay).
+- [ ] Configure real SMTP credentials (or an approved relay) — required for B4+.
 - [ ] Leave `RATE_LIMIT_ENABLED=true` in shared environments.
 - [ ] Serve the frontend over HTTPS and keep session `Secure` (`NODE_ENV=production` or `COOKIE_SECURE=true`).
 - [ ] Confirm `SEED_DEMO=false` outside local demo boxes.
+- [ ] Hacienda credentials only via encrypted org settings (B5+) — never in git.
 
 ### Infrastructure (Docker)
 
-Recommended clone flow: **DB + API in Docker**, frontend on the host with `pnpm`.
+Recommended flow: **DB + API in Docker**, frontend on the host with `pnpm`.
 
 | Goal | Command |
 | :--- | :--- |
@@ -205,13 +185,13 @@ Recommended clone flow: **DB + API in Docker**, frontend on the host with `pnpm`
 | **Start Only DB** (API via `uv` on host) | `docker compose up -d db` |
 | **Stop Everything** | `docker compose stop` |
 | **Full Wipe & Reset** | `docker compose down -v` |
-| **View DB Logs** | `docker logs -f nidus-postgres` |
-| **View API Logs** | `docker logs -f nidus-fastapi` |
+| **View DB Logs** | `docker logs -f nidus-billing-postgres` |
+| **View API Logs** | `docker logs -f nidus-billing-api` |
 | **Rebuild API image** | `docker compose build api --no-cache` |
 | **Seed demo data** | `docker compose exec api python seed.py` |
 | **Wipe DB volume** | `docker compose down -v` then `up -d --build` |
 
-API listens on `http://localhost:8000` (docs at `/docs`). Compose overrides `POSTGRES_SERVER=db` inside the API container; host `uv` workflows keep `POSTGRES_SERVER=localhost` from `.env`.
+API listens on `http://localhost:8001` by default (docs at `/docs`; override with `API_PORT`). Compose overrides `POSTGRES_SERVER=db` inside the API container; host `uv` workflows keep `POSTGRES_SERVER=localhost` from `.env`.
 
 #### Demo accounts (after seed)
 
@@ -236,6 +216,8 @@ Or set `SEED_DEMO=true` in `.env` so the API container seeds automatically on st
 
 ### Backend Development (Python / uv)
 
+From `backend/`:
+
 | Goal | Command |
 | :--- | :--- |
 | **Install Deps** | `uv sync` |
@@ -243,21 +225,27 @@ Or set `SEED_DEMO=true` in `.env` so the API container seeds automatically on st
 | **Run Migrations (test DB)** | `uv run python scripts/migrate_test_db.py` |
 | **Create Migration** | `uv run alembic revision --autogenerate -m "description"` |
 | **Run Seed Script** | `uv run seed.py` |
-| **Run Seed Script on Docker** | `docker exec -it nidus-fastapi python app/core/seed.py` |
+| **Run Seed Script on Docker** | `docker compose exec api python seed.py` |
 | **Run API Locally** | `uv run fastapi dev app/main.py` |
 | **Run Tests** | `uv run pytest` |
 
+Point Cursor/VS Code at `backend/.venv/Scripts/python.exe` so imports resolve.
+
 ### Frontend Development (pnpm)
+
+Run from `nidus-frontend/`:
 
 | Goal | Command |
 | :--- | :--- |
 | **Install Deps** | `pnpm install` |
-| **Dev Mode** | `pnpm --filter nidus-frontend dev` |
-| **Build Prod** | `pnpm --filter nidus-frontend build` |
-| **Strict Typecheck** | `pnpm --filter nidus-frontend tsc --noEmit` |
-| **Run Linter** | `pnpm --filter nidus-frontend lint` |
-| **Add UI Component** | `pnpm --filter nidus-frontend dlx shadcn@latest add <component>` |
+| **Dev Mode** | `pnpm dev -- --port 3001` |
+| **Build Prod** | `pnpm build` |
+| **Strict Typecheck** | `pnpm typecheck` |
+| **Run Linter** | `pnpm lint` |
+| **Add UI Component** | `pnpm dlx shadcn@latest add <component>` |
 | **Clean cache** | `pnpm store prune` |
+
+If port 3001 is already in use, another Billing FE is running — use it or kill that PID first. Core usually occupies `3000`.
 
 ### Maintenance & Cleanup
 
@@ -272,7 +260,7 @@ Or set `SEED_DEMO=true` in `.env` so the API container seeds automatically on st
 
 Copyright (c) 2026 Isaac Granados Quesada.
 
-Nidus Core is licensed under the **GNU Affero General Public License v3.0 (AGPL-3.0)**.
+Nidus Billing is licensed under the **GNU Affero General Public License v3.0 (AGPL-3.0)** (same as Nidus Core).
 See [`LICENSE`](LICENSE). If you run a modified version as a network service (SaaS), you must
 offer the corresponding source to users of that service under the same license.
 

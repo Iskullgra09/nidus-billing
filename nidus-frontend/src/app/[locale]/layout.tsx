@@ -20,8 +20,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Nidus Core",
-  description: "Enterprise SaaS Architecture",
+  title: "Nidus Billing",
+  description: "Operational billing for multitenant SaaS",
 };
 
 export default async function RootLayout({

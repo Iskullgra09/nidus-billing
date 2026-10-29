@@ -13,8 +13,8 @@ from sqlalchemy.pool import NullPool
 from app.core.config import settings
 
 # Tests MUST never touch the development database (POSTGRES_DB).
-# - admin_engine  → nidus_admin @ POSTGRES_TEST_DB (bypass RLS for truncate/seed)
-# - app_engine    → nidus_app_user @ POSTGRES_TEST_DB (RLS enforced, same as production)
+# - admin_engine  → nidus_billing_admin @ POSTGRES_TEST_DB (bypass RLS for truncate/seed)
+# - app_engine    → nidus_billing_app @ POSTGRES_TEST_DB (RLS enforced, same as production)
 ADMIN_DB_URL = settings.TEST_DATABASE_URL
 APP_DB_URL = settings.TEST_APP_DATABASE_URL
 
@@ -61,7 +61,7 @@ def disable_rate_limit_by_default(monkeypatch: MonkeyPatch) -> None:
 @pytest.fixture
 async def db_session() -> AsyncGenerator[AsyncSession, None]:
     """
-    Provides an AsyncSession with 'nidus_app_user' privileges on the TEST database.
+    Provides an AsyncSession with 'nidus_billing_app' privileges on the TEST database.
     RLS policies are strictly enforced for this session.
     """
     async with app_session_maker() as session:
@@ -71,7 +71,7 @@ async def db_session() -> AsyncGenerator[AsyncSession, None]:
 @pytest.fixture
 async def admin_db_session() -> AsyncGenerator[AsyncSession, None]:
     """
-    Provides an AsyncSession with 'nidus_admin' privileges on the TEST database.
+    Provides an AsyncSession with 'nidus_billing_admin' privileges on the TEST database.
     Bypasses RLS policies. To be used exclusively for setup and verification.
     """
     async with admin_session_maker() as session:
