@@ -4,7 +4,11 @@
 
 ![Python 3.12+](https://img.shields.io/badge/python-3.12+-blue.svg)
 ![FastAPI](https://img.shields.io/badge/FastAPI-0.110+-009688.svg)
-![PostgreSQL 17/18](https://img.shields.io/badge/PostgreSQL-17/18-336791.svg)
+![PostgreSQL 17](https://img.shields.io/badge/PostgreSQL-17-336791.svg)
+![Next.js 16](https://img.shields.io/badge/Next.js-16-black.svg)
+![React 19](https://img.shields.io/badge/React-19-61DAFB.svg)
+![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6.svg)
+![Tailwind CSS](https://img.shields.io/badge/Tailwind-v4-38BDF8.svg)
 ![License](https://img.shields.io/badge/license-AGPL--3.0-blue.svg)
 
 Nidus is an enterprise-grade monorepo designed for massive scale. It implements **Pragmatic Modular Monolith** patterns with hardware-level data isolation using **PostgreSQL Row-Level Security (RLS)** and **JSONB Granular Authorization**.
