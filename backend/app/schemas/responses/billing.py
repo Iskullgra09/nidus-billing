@@ -31,6 +31,7 @@ class ItemResponse(BaseModel):
     unit: str
     unit_price: Decimal
     tax_rate: Optional[Decimal] = None
+    cabys_code: Optional[str] = None
     is_service: bool
     is_active: bool
     created_at: datetime
@@ -80,6 +81,8 @@ class InvoiceResponse(BaseModel):
     payment_condition: str
     status: str
     currency: str
+    exchange_rate: Optional[Decimal] = None
+    exchange_rate_date: Optional[date] = None
     document_number: Optional[str] = None
     reference_number: Optional[str] = None
     notes: Optional[str] = None
@@ -107,6 +110,8 @@ class InvoiceListItem(BaseModel):
     payment_condition: str
     status: str
     currency: str
+    exchange_rate: Optional[Decimal] = None
+    exchange_rate_date: Optional[date] = None
     document_number: Optional[str] = None
     reference_number: Optional[str] = None
     issued_at: Optional[datetime] = None

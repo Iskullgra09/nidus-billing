@@ -72,6 +72,7 @@ async def test_emit_and_verify_hacienda_mock(
                     "quantity": "1",
                     "unit_price": "100.0000",
                     "tax_rate": "13",
+                    "cabys_code": "85171200",
                 }
             ],
         },
@@ -79,6 +80,7 @@ async def test_emit_and_verify_hacienda_mock(
     assert draft.status_code == 201, draft.text
     invoice_id = draft.json()["data"]["id"]
     assert draft.json()["data"]["currency"] == "CRC"
+    assert draft.json()["data"]["lines"][0]["cabys_code"] == "85171200"
 
     blocked_draft = await client.post(
         f"/api/v1/billing/invoices/{invoice_id}/emit-hacienda"
@@ -115,6 +117,130 @@ async def test_emit_and_verify_hacienda_mock(
 
 
 @pytest.mark.asyncio
+async def test_emit_requires_cabys(
+    auth_client: Tuple[AsyncClient, Dict[str, Any]],
+) -> None:
+    client, _ = auth_client
+    await client.put(
+        "/api/v1/billing/fiscal-profile",
+        json={
+            "legal_name": "Acme Costa Rica SA",
+            "identification_type": "juridica",
+            "identification_number": "3101123456",
+            "economic_activity_code": "620100",
+            "branch_code": "001",
+            "province": "San José",
+            "canton": "Central",
+            "district": "Carmen",
+            "email": "fiscal@acme.example",
+        },
+    )
+    customer_res = await client.post(
+        "/api/v1/billing/customers",
+        json={"name": "No Cabys", "tax_id": "3101987001"},
+    )
+    customer_id = customer_res.json()["data"]["id"]
+    draft = await client.post(
+        "/api/v1/billing/invoices",
+        json={
+            "customer_id": customer_id,
+            "payment_condition": "contado",
+            "currency": "CRC",
+            "lines": [
+                {
+                    "description": "Missing CABYS",
+                    "quantity": "1",
+                    "unit_price": "10",
+                    "tax_rate": "13",
+                }
+            ],
+        },
+    )
+    invoice_id = draft.json()["data"]["id"]
+    await client.post(f"/api/v1/billing/invoices/{invoice_id}/issue")
+    emit = await client.post(f"/api/v1/billing/invoices/{invoice_id}/emit-hacienda")
+    assert emit.status_code == 400
+    assert emit.json()["code"] == "CABYS_REQUIRED"
+
+
+@pytest.mark.asyncio
+async def test_emit_usd_requires_exchange_rate(
+    auth_client: Tuple[AsyncClient, Dict[str, Any]],
+) -> None:
+    client, _ = auth_client
+    await client.put(
+        "/api/v1/billing/fiscal-profile",
+        json={
+            "legal_name": "Acme Costa Rica SA",
+            "identification_type": "juridica",
+            "identification_number": "3101123456",
+            "economic_activity_code": "620100",
+            "branch_code": "001",
+            "province": "San José",
+            "canton": "Central",
+            "district": "Carmen",
+            "email": "fiscal@acme.example",
+        },
+    )
+    customer_res = await client.post(
+        "/api/v1/billing/customers",
+        json={"name": "USD Client", "tax_id": "3101987002"},
+    )
+    customer_id = customer_res.json()["data"]["id"]
+
+    missing_rate = await client.post(
+        "/api/v1/billing/invoices",
+        json={
+            "customer_id": customer_id,
+            "payment_condition": "contado",
+            "currency": "USD",
+            "lines": [
+                {
+                    "description": "USD no rate",
+                    "quantity": "1",
+                    "unit_price": "10",
+                    "tax_rate": "13",
+                    "cabys_code": "85171200",
+                }
+            ],
+        },
+    )
+    assert missing_rate.status_code == 201
+    missing_id = missing_rate.json()["data"]["id"]
+    await client.post(f"/api/v1/billing/invoices/{missing_id}/issue")
+    blocked = await client.post(f"/api/v1/billing/invoices/{missing_id}/emit-hacienda")
+    assert blocked.status_code == 400
+    assert blocked.json()["code"] == "EXCHANGE_RATE_REQUIRED"
+
+    with_rate = await client.post(
+        "/api/v1/billing/invoices",
+        json={
+            "customer_id": customer_id,
+            "payment_condition": "contado",
+            "currency": "USD",
+            "exchange_rate": "520.00000",
+            "exchange_rate_date": "2026-10-29",
+            "lines": [
+                {
+                    "description": "USD with rate",
+                    "quantity": "1",
+                    "unit_price": "10",
+                    "tax_rate": "13",
+                    "cabys_code": "85171200",
+                }
+            ],
+        },
+    )
+    assert with_rate.status_code == 201, with_rate.text
+    assert with_rate.json()["data"]["exchange_rate"] == "520.00000"
+    rate_id = with_rate.json()["data"]["id"]
+    await client.post(f"/api/v1/billing/invoices/{rate_id}/issue")
+    emit = await client.post(f"/api/v1/billing/invoices/{rate_id}/emit-hacienda")
+    assert emit.status_code == 200, emit.text
+    assert emit.json()["data"]["mock_mode"] is True
+
+
+@pytest.mark.asyncio
 async def test_currency_whitelist(
     auth_client: Tuple[AsyncClient, Dict[str, Any]],
 ) -> None:
@@ -131,7 +257,15 @@ async def test_currency_whitelist(
             "customer_id": customer_id,
             "payment_condition": "contado",
             "currency": "USD",
-            "lines": [{"description": "USD line", "quantity": "1", "unit_price": "10"}],
+            "exchange_rate": "500.00000",
+            "lines": [
+                {
+                    "description": "USD line",
+                    "quantity": "1",
+                    "unit_price": "10",
+                    "cabys_code": "85171200",
+                }
+            ],
         },
     )
     assert ok.status_code == 201

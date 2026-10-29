@@ -44,6 +44,7 @@ class FacturaElectronicaInput:
     consecutive: str
     issued_at: datetime
     currency: str
+    exchange_rate: Decimal
     emitter: XmlParty
     receptor: XmlParty
     lines: list[XmlLine]
@@ -130,7 +131,8 @@ def build_factura_electronica_xml(data: FacturaElectronicaInput) -> str:
     resumen = SubElement(root, "ResumenFactura")
     codigo_tipo_cambio = SubElement(resumen, "CodigoTipoMoneda")
     _text(codigo_tipo_cambio, "CodigoMoneda", data.currency)
-    _text(codigo_tipo_cambio, "TipoCambio", "1.00000" if data.currency == "CRC" else "1.00000")
+    rate = data.exchange_rate if data.currency != "CRC" else Decimal("1")
+    _text(codigo_tipo_cambio, "TipoCambio", _money(rate))
     _text(resumen, "TotalVentaNeta", _money(data.subtotal))
     _text(resumen, "TotalImpuesto", _money(data.tax_total))
     _text(resumen, "TotalComprobante", _money(data.total))

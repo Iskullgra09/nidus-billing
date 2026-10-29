@@ -21,6 +21,7 @@ class Item(UUIDMixin, TimestampMixin, SoftDeleteMixin, TenantMixin, table=True):
         sa_column=sa.Column(sa.Numeric(7, 4), nullable=True),
         description="Tax rate hint as percent (e.g. 13.0000)",
     )
+    cabys_code: Optional[str] = Field(default=None, max_length=16)
     is_service: bool = Field(default=False, nullable=False)
     is_active: bool = Field(default=True, nullable=False)
 

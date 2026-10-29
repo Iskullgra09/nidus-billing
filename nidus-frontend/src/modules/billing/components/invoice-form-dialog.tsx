@@ -29,6 +29,7 @@ const lineSchema = z.object({
   quantity: z.string().min(1),
   unit_price: z.string().min(1),
   tax_rate: z.string().optional(),
+  cabys_code: z.string().optional(),
   unit: z.string().min(1),
 });
 
@@ -36,6 +37,8 @@ const invoiceSchema = z.object({
   customer_id: z.string().uuid(),
   payment_condition: z.enum(["contado", "credito"]),
   currency: z.enum(["CRC", "USD"]),
+  exchange_rate: z.string().optional(),
+  exchange_rate_date: z.string().optional(),
   due_date: z.string().optional(),
   reference_number: z.string().optional(),
   notes: z.string().optional(),
@@ -80,6 +83,8 @@ export function InvoiceFormDialog({
       customer_id: "",
       payment_condition: "contado",
       currency: "CRC",
+      exchange_rate: "",
+      exchange_rate_date: "",
       due_date: "",
       reference_number: "",
       notes: "",
@@ -89,6 +94,7 @@ export function InvoiceFormDialog({
           quantity: "1.00",
           unit_price: "0.00",
           tax_rate: "",
+          cabys_code: "",
           unit: "unit",
         },
       ],
@@ -104,6 +110,10 @@ export function InvoiceFormDialog({
   const paymentCondition = useWatch({
     control: form.control,
     name: "payment_condition",
+  });
+  const currency = useWatch({
+    control: form.control,
+    name: "currency",
   });
 
   const previewTotals = React.useMemo(() => {
@@ -126,6 +136,10 @@ export function InvoiceFormDialog({
       customer_id: invoice?.customer_id ?? customers[0]?.id ?? "",
       payment_condition: invoice?.payment_condition ?? "contado",
       currency: (invoice?.currency as "CRC" | "USD") ?? "CRC",
+      exchange_rate: invoice?.exchange_rate
+        ? formatMoneyInput(invoice.exchange_rate)
+        : "",
+      exchange_rate_date: invoice?.exchange_rate_date ?? "",
       due_date: invoice?.due_date ?? "",
       reference_number: invoice?.reference_number ?? "",
       notes: invoice?.notes ?? "",
@@ -135,6 +149,7 @@ export function InvoiceFormDialog({
           quantity: formatMoneyInput(line.quantity),
           unit_price: formatMoneyInput(line.unit_price),
           tax_rate: formatPercentInput(line.tax_rate),
+          cabys_code: line.cabys_code ?? "",
           unit: line.unit,
         })) ?? [
           {
@@ -142,6 +157,7 @@ export function InvoiceFormDialog({
             quantity: "1.00",
             unit_price: "0.00",
             tax_rate: "",
+            cabys_code: "",
             unit: "unit",
           },
         ],
@@ -159,6 +175,14 @@ export function InvoiceFormDialog({
       customer_id: values.customer_id,
       payment_condition: values.payment_condition,
       currency: values.currency,
+      exchange_rate:
+        values.currency === "USD" && values.exchange_rate
+          ? values.exchange_rate
+          : null,
+      exchange_rate_date:
+        values.currency === "USD" && values.exchange_rate_date
+          ? values.exchange_rate_date
+          : null,
       due_date: values.due_date || null,
       reference_number: values.reference_number || null,
       notes: values.notes || null,
@@ -167,6 +191,7 @@ export function InvoiceFormDialog({
         quantity: line.quantity,
         unit_price: line.unit_price,
         tax_rate: line.tax_rate || null,
+        cabys_code: line.cabys_code || null,
         unit: line.unit,
       })),
     };
@@ -263,6 +288,36 @@ export function InvoiceFormDialog({
                     </FormItem>
                   )}
                 />
+                {currency === "USD" && (
+                  <>
+                    <FormField
+                      control={form.control}
+                      name="exchange_rate"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>{t("fieldExchangeRate")}</FormLabel>
+                          <FormControl>
+                            <Input {...field} inputMode="decimal" placeholder="500.00000" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="exchange_rate_date"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>{t("fieldExchangeRateDate")}</FormLabel>
+                          <FormControl>
+                            <Input type="date" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </>
+                )}
                 {paymentCondition === "credito" && (
                   <FormField
                     control={form.control}
@@ -322,6 +377,7 @@ export function InvoiceFormDialog({
                       quantity: "1.00",
                       unit_price: "0.00",
                       tax_rate: "13",
+                      cabys_code: "",
                       unit: "unit",
                     })
                   }
@@ -332,11 +388,12 @@ export function InvoiceFormDialog({
               </div>
 
               <div className="hidden sm:grid sm:grid-cols-12 gap-2 px-1 text-xs text-muted-foreground">
-                <span className="col-span-4">{t("fieldDescription")}</span>
-                <span className="col-span-2 text-right">{t("fieldQuantity")}</span>
+                <span className="col-span-3">{t("fieldDescription")}</span>
+                <span className="col-span-2">{t("fieldCabys")}</span>
+                <span className="col-span-1 text-right">{t("fieldQuantity")}</span>
                 <span className="col-span-2 text-right">{t("fieldUnitPrice")}</span>
-                <span className="col-span-2 text-right">{t("fieldTaxRate")}</span>
-                <span className="col-span-1 text-right">{t("tableTotal")}</span>
+                <span className="col-span-1 text-right">{t("fieldTaxRate")}</span>
+                <span className="col-span-2 text-right">{t("tableTotal")}</span>
                 <span className="col-span-1" />
               </div>
 
@@ -356,7 +413,7 @@ export function InvoiceFormDialog({
                       control={form.control}
                       name={`lines.${index}.description`}
                       render={({ field: lineField }) => (
-                        <FormItem className="sm:col-span-4">
+                        <FormItem className="sm:col-span-3">
                           <FormLabel className="sm:sr-only">{t("fieldDescription")}</FormLabel>
                           <FormControl>
                             <Input {...lineField} />
@@ -367,9 +424,22 @@ export function InvoiceFormDialog({
                     />
                     <FormField
                       control={form.control}
-                      name={`lines.${index}.quantity`}
+                      name={`lines.${index}.cabys_code`}
                       render={({ field: lineField }) => (
                         <FormItem className="sm:col-span-2">
+                          <FormLabel className="sm:sr-only">{t("fieldCabys")}</FormLabel>
+                          <FormControl>
+                            <Input {...lineField} placeholder="85171200" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name={`lines.${index}.quantity`}
+                      render={({ field: lineField }) => (
+                        <FormItem className="sm:col-span-1">
                           <FormLabel className="sm:sr-only">{t("fieldQuantity")}</FormLabel>
                           <FormControl>
                             <Input className="text-right tabular-nums" {...lineField} />
@@ -395,7 +465,7 @@ export function InvoiceFormDialog({
                       control={form.control}
                       name={`lines.${index}.tax_rate`}
                       render={({ field: lineField }) => (
-                        <FormItem className="sm:col-span-2">
+                        <FormItem className="sm:col-span-1">
                           <FormLabel className="sm:sr-only">{t("fieldTaxRate")}</FormLabel>
                           <FormControl>
                             <Input
@@ -408,7 +478,7 @@ export function InvoiceFormDialog({
                         </FormItem>
                       )}
                     />
-                    <div className="sm:col-span-1 flex h-9 items-center justify-end text-sm tabular-nums font-medium">
+                    <div className="sm:col-span-2 flex h-9 items-center justify-end text-sm tabular-nums font-medium">
                       {lineTotal == null ? "—" : formatMoney(lineTotal)}
                     </div>
                     <div className="sm:col-span-1 flex justify-end">

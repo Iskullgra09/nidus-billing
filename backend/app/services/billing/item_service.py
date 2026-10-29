@@ -84,6 +84,7 @@ class ItemService:
             unit=data.unit.strip(),
             unit_price=data.unit_price,
             tax_rate=data.tax_rate,
+            cabys_code=data.cabys_code.strip() if data.cabys_code else None,
             is_service=data.is_service,
             is_active=data.is_active,
         )
@@ -131,6 +132,10 @@ class ItemService:
         if "unit" in payload and payload["unit"] is not None:
             row.unit = payload["unit"].strip()
             del payload["unit"]
+        if "cabys_code" in payload:
+            cabys = payload["cabys_code"]
+            row.cabys_code = cabys.strip() if cabys else None
+            del payload["cabys_code"]
         for key, value in payload.items():
             setattr(row, key, value)
 

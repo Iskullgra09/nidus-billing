@@ -89,6 +89,8 @@ export interface InvoiceListItem {
   payment_condition: PaymentCondition;
   status: InvoiceStatus;
   currency: string;
+  exchange_rate?: string | null;
+  exchange_rate_date?: string | null;
   document_number: string | null;
   reference_number: string | null;
   issued_at: string | null;
@@ -136,6 +138,8 @@ export interface InvoicePayload {
   notes?: string | null;
   reference_number?: string | null;
   currency?: string;
+  exchange_rate?: string | null;
+  exchange_rate_date?: string | null;
   lines: InvoiceLinePayload[];
 }
 

@@ -51,7 +51,7 @@ Phases are **product slices**, not Core’s old Phase 1–16 list. Status update
 | **B4** | Outbound email (send invoice) | Done |
 | **B5** | Org fiscal profile & Hacienda credentials | Done |
 | **B6** | Hacienda outbound (emit + verify), CRC/USD whitelist, tax codes for XML | Done (mock emit; live XAdES gated) |
-| **B6.1** | XAdES signer + sandbox live path; USD rate on FE; CABYS UI mínimo | Next |
+| **B6.1** | XAdES signer + sandbox live path; USD rate on FE; CABYS UI mínimo | Done (mock default; live gated) |
 | **B7** | Hacienda inbound (receive / accept-reject) | Planned |
 | **B8** | Inbound email mailbox (load supplier invoices) | Planned |
 | **B9** | Hardening, UX polish, quotes→invoice, domain tests | Planned |
@@ -119,11 +119,14 @@ Operational billing (B1–B4) ships value before fiscal/Hacienda. B5 stores issu
 
 **Goal:** safe path to real MH **sandbox** without jumping to B7/B8 or full B10.
 
-1. **XAdES-EPES** signer using org `.p12` (no mock marker when live).
-2. **Test ladder:** local mock (default) → MH sandbox with ATV test credentials → production only with real org + `HACIENDA_LIVE`.
-3. **USD on FE:** `exchange_rate` (+ rate date) on the invoice when `currency=USD` for XML `TipoCambio`; manual or simple fetch — **not** BCCR history/reports (those stay **B10**).
-4. **CABYS mínimo:** require/select `cabys_code` on lines (and optional default on items) so emit is MH-ready; rich CABYS catalog sync can wait (B9 / later note).
+1. **XAdES-EPES** via `signxml` + org `.p12` when present; mock marker when no cert (`HACIENDA_LIVE=false` default). Live emit refuses mock sign / missing `.p12`.
+2. **Test ladder:** local mock (default) → MH sandbox with ATV test credentials + test `.p12` → production only with real org + `HACIENDA_LIVE`. Policy digest env (`HACIENDA_XADES_POLICY_*`) is placeholder until MH PDF digest is set.
+3. **USD on FE:** invoice `exchange_rate` (+ `exchange_rate_date`) required for USD emit; XML `TipoCambio` filled. Manual entry only — **not** BCCR sync (**B10**).
+4. **CABYS mínimo:** line `cabys_code` required at emit; optional item default copied onto lines; invoice/item forms expose the field. Rich CABYS catalog sync waits (B9 / later).
 5. **Out of scope:** supplier reception (**B7**), inbound mailbox (**B8**), NC/ND full flows, BCCR multi-currency AR (**B10**).
+
+**Shipped:** `signxml` XAdES + mock fallback; invoice FX fields + `TipoCambio`; CABYS on lines/items + emit gates; migration `d2e3f4a5b6c7`; demo seed CRC/USD FE-ready; unit + API tests.  
+**Done when:** mock CI green; XAdES with test `.p12`; USD/CABYS block incomplete emit; UI captures rate + CABYS. ✅
 
 ### B7 — Hacienda inbound (receive / accept-reject)
 

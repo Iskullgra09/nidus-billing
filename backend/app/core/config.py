@@ -53,6 +53,14 @@ class Settings(BaseSettings):
 
     CREDENTIALS_ENCRYPTION_KEY: str = ""
     HACIENDA_LIVE: bool = False
+    HACIENDA_XADES_POLICY_ID: str = (
+        "https://cdn.comprobanteselectronicos.go.cr/xml-schemas/"
+        "Resolucion%20Comprobantes%20Electronicos%204.4.pdf"
+    )
+    HACIENDA_XADES_POLICY_DESCRIPTION: str = (
+        "Politica de firma de comprobantes electronicos Costa Rica v4.4"
+    )
+    HACIENDA_XADES_POLICY_DIGEST: str = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
 
     @computed_field
     @property
