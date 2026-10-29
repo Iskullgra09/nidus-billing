@@ -7,6 +7,7 @@ import { useSearchParams } from "next/navigation";
 import {
   Ban,
   Banknote,
+  Eye,
   FileDown,
   MoreHorizontal,
   Pencil,
@@ -27,8 +28,10 @@ import {
 import { DataTable, ColumnDef } from "@/shared/components/layout/data-table";
 import { CanAccess } from "@/modules/access/components/can-access";
 import { NidusScope } from "@/shared/access/scopes";
+import { formatMoney } from "../lib/format";
 import { Party, PageInfo } from "../types/party";
 import { Invoice, InvoiceListItem } from "../types/invoice";
+import { InvoiceDetailDialog } from "./invoice-detail-dialog";
 import { InvoiceFormDialog } from "./invoice-form-dialog";
 import {
   createInvoiceAction,
@@ -61,6 +64,7 @@ export function InvoicesTable({
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const [dialogOpen, setDialogOpen] = React.useState(false);
+  const [detailOpen, setDetailOpen] = React.useState(false);
   const [selected, setSelected] = React.useState<Invoice | null>(null);
 
   const replaceQuery = (mutate: (params: URLSearchParams) => void) => {
@@ -70,19 +74,39 @@ export function InvoicesTable({
     router.replace(qs ? `${pathname}?${qs}` : pathname);
   };
 
+  const loadInvoice = async (row: InvoiceListItem) => {
+    const full = await getInvoiceAction(row.id);
+    if (!full) {
+      toast.error(t("loadError"));
+      return null;
+    }
+    return full;
+  };
+
   const openCreate = () => {
     setSelected(null);
     setDialogOpen(true);
   };
 
+  const openView = async (row: InvoiceListItem) => {
+    const full = await loadInvoice(row);
+    if (!full) return;
+    setSelected(full);
+    setDetailOpen(true);
+  };
+
   const openEdit = async (row: InvoiceListItem) => {
     if (row.status !== "draft") return;
-    const full = await getInvoiceAction(row.id);
-    if (!full) {
-      toast.error(t("loadError"));
-      return;
-    }
+    const full = await loadInvoice(row);
+    if (!full) return;
     setSelected(full);
+    setDialogOpen(true);
+  };
+
+  const openEditFromDetail = (invoice: Invoice) => {
+    if (invoice.status !== "draft") return;
+    setDetailOpen(false);
+    setSelected(invoice);
     setDialogOpen(true);
   };
 
@@ -147,8 +171,9 @@ export function InvoicesTable({
     },
     {
       header: t("tableStatus"),
+      align: "center",
       cell: (row) => (
-        <div className="flex flex-wrap gap-1">
+        <div className="flex flex-wrap justify-center gap-1">
           <Badge variant={statusVariant(row.status)}>{t(`status.${row.status}`)}</Badge>
           {row.is_overdue && <Badge variant="destructive">{t("overdueBadge")}</Badge>}
         </div>
@@ -156,71 +181,88 @@ export function InvoicesTable({
     },
     {
       header: t("tableCondition"),
+      align: "center",
       cell: (row) => t(row.payment_condition),
     },
     {
       header: t("tableTotal"),
-      cell: (row) => `${row.total} ${row.currency}`,
+      align: "right",
+      cell: (row) => formatMoney(row.total, { currency: row.currency, withCurrency: true }),
     },
     {
       header: t("tableBalance"),
-      cell: (row) => `${row.balance_due} ${row.currency}`,
+      align: "right",
+      cell: (row) => formatMoney(row.balance_due, { currency: row.currency, withCurrency: true }),
     },
     {
       header: "",
       className: "w-12",
+      align: "right",
       cell: (row) => (
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon" className="size-8">
-              <MoreHorizontal className="size-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem onClick={() => void handlePdf(row)}>
-              <FileDown className="size-4" />
-              {t("pdfAction")}
-            </DropdownMenuItem>
-            <CanAccess scope={NidusScope.INVOICE_WRITE}>
-              {row.status === "draft" && (
-                <>
+        <div
+          onClick={(event) => event.stopPropagation()}
+          onKeyDown={(event) => event.stopPropagation()}
+        >
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon" className="size-8">
+                <MoreHorizontal className="size-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => void openView(row)}>
+                <Eye className="size-4" />
+                {t("viewAction")}
+              </DropdownMenuItem>
+              <CanAccess scope={NidusScope.INVOICE_WRITE}>
+                {row.status === "draft" && (
                   <DropdownMenuItem onClick={() => void openEdit(row)}>
                     <Pencil className="size-4" />
                     {t("editAction")}
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => void handleIssue(row)}>
-                    <Send className="size-4" />
-                    {t("issueAction")}
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    className="text-destructive focus:text-destructive"
-                    onClick={() => void handleDelete(row)}
-                  >
-                    <Trash2 className="size-4" />
-                    {t("deleteAction")}
-                  </DropdownMenuItem>
-                </>
-              )}
-              {(row.status === "issued" || row.status === "partial") && (
-                <>
-                  <DropdownMenuItem onClick={() => void handlePayment(row)}>
-                    <Banknote className="size-4" />
-                    {t("paymentAction")}
-                  </DropdownMenuItem>
-                  {Number(row.amount_paid) === 0 && (
+                )}
+              </CanAccess>
+              <DropdownMenuItem onClick={() => void handlePdf(row)}>
+                <FileDown className="size-4" />
+                {t("pdfAction")}
+              </DropdownMenuItem>
+              <CanAccess scope={NidusScope.INVOICE_WRITE}>
+                {row.status === "draft" && (
+                  <>
+                    <DropdownMenuItem onClick={() => void handleIssue(row)}>
+                      <Send className="size-4" />
+                      {t("issueAction")}
+                    </DropdownMenuItem>
                     <DropdownMenuItem
                       className="text-destructive focus:text-destructive"
-                      onClick={() => void handleVoid(row)}
+                      onClick={() => void handleDelete(row)}
                     >
-                      <Ban className="size-4" />
-                      {t("voidAction")}
+                      <Trash2 className="size-4" />
+                      {t("deleteAction")}
                     </DropdownMenuItem>
-                  )}
-                </>
-              )}
-            </CanAccess>
-          </DropdownMenuContent>
-        </DropdownMenu>
+                  </>
+                )}
+                {(row.status === "issued" || row.status === "partial") && (
+                  <>
+                    <DropdownMenuItem onClick={() => void handlePayment(row)}>
+                      <Banknote className="size-4" />
+                      {t("paymentAction")}
+                    </DropdownMenuItem>
+                    {Number(row.amount_paid) === 0 && (
+                      <DropdownMenuItem
+                        className="text-destructive focus:text-destructive"
+                        onClick={() => void handleVoid(row)}
+                      >
+                        <Ban className="size-4" />
+                        {t("voidAction")}
+                      </DropdownMenuItem>
+                    )}
+                  </>
+                )}
+              </CanAccess>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
       ),
     },
   ];
@@ -246,6 +288,7 @@ export function InvoicesTable({
         hasNextPage={pageInfo.has_next_page}
         isFirstPage={!searchParams.get("cursor")}
         initialSearch={searchQuery}
+        onRowClick={(row) => void openView(row)}
         onSearchChange={(query) => {
           const next = query.trim();
           if (next === searchQuery) return;
@@ -266,6 +309,13 @@ export function InvoicesTable({
             params.set("cursor", pageInfo.end_cursor!);
           });
         }}
+      />
+
+      <InvoiceDetailDialog
+        isOpen={detailOpen}
+        onClose={setDetailOpen}
+        invoice={selected}
+        onEditDraft={openEditFromDetail}
       />
 
       <InvoiceFormDialog

@@ -4,7 +4,7 @@ import * as React from "react";
 import { useTranslations } from "next-intl";
 import { useRouter, usePathname } from "@/core/i18n/routing";
 import { useSearchParams } from "next/navigation";
-import { MoreHorizontal, Pencil, Plus, Trash2 } from "lucide-react";
+import { Eye, MoreHorizontal, Pencil, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/shared/ui/button";
@@ -20,6 +20,7 @@ import { CanAccess } from "@/modules/access/components/can-access";
 import { NidusScope } from "@/shared/access/scopes";
 import { ActionResponse } from "@/core/types/api";
 import { Party, PartyPayload, PageInfo } from "../types/party";
+import { PartyDetailDialog } from "./party-detail-dialog";
 import { PartyFormDialog } from "./party-form-dialog";
 
 interface PartiesTableProps {
@@ -50,6 +51,7 @@ export function PartiesTable({
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const [dialogOpen, setDialogOpen] = React.useState(false);
+  const [detailOpen, setDetailOpen] = React.useState(false);
   const [selected, setSelected] = React.useState<Party | null>(null);
 
   const replaceQuery = (mutate: (params: URLSearchParams) => void) => {
@@ -64,7 +66,13 @@ export function PartiesTable({
     setDialogOpen(true);
   };
 
+  const openView = (party: Party) => {
+    setSelected(party);
+    setDetailOpen(true);
+  };
+
   const openEdit = (party: Party) => {
+    setDetailOpen(false);
     setSelected(party);
     setDialogOpen(true);
   };
@@ -97,17 +105,23 @@ export function PartiesTable({
     },
     {
       header: t("tableTaxId"),
+      align: "center",
       cell: (party) => party.tax_id || "—",
     },
     {
       header: t("tablePhone"),
+      align: "right",
       cell: (party) => party.phone || "—",
     },
     {
       header: "",
       className: "w-12",
+      align: "right",
       cell: (party) => (
-        <CanAccess scope={writeScope}>
+        <div
+          onClick={(event) => event.stopPropagation()}
+          onKeyDown={(event) => event.stopPropagation()}
+        >
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="icon" className="size-8">
@@ -115,20 +129,26 @@ export function PartiesTable({
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => openEdit(party)}>
-                <Pencil className="size-4" />
-                {t("editAction")}
+              <DropdownMenuItem onClick={() => openView(party)}>
+                <Eye className="size-4" />
+                {t("viewAction")}
               </DropdownMenuItem>
-              <DropdownMenuItem
-                className="text-destructive focus:text-destructive"
-                onClick={() => void handleDelete(party)}
-              >
-                <Trash2 className="size-4" />
-                {t("deleteAction")}
-              </DropdownMenuItem>
+              <CanAccess scope={writeScope}>
+                <DropdownMenuItem onClick={() => openEdit(party)}>
+                  <Pencil className="size-4" />
+                  {t("editAction")}
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  className="text-destructive focus:text-destructive"
+                  onClick={() => void handleDelete(party)}
+                >
+                  <Trash2 className="size-4" />
+                  {t("deleteAction")}
+                </DropdownMenuItem>
+              </CanAccess>
             </DropdownMenuContent>
           </DropdownMenu>
-        </CanAccess>
+        </div>
       ),
     },
   ];
@@ -154,6 +174,7 @@ export function PartiesTable({
         hasNextPage={pageInfo.has_next_page}
         isFirstPage={!searchParams.get("cursor")}
         initialSearch={searchQuery}
+        onRowClick={openView}
         onSearchChange={(query) => {
           const next = query.trim();
           if (next === searchQuery) return;
@@ -174,6 +195,15 @@ export function PartiesTable({
             params.set("cursor", pageInfo.end_cursor!);
           });
         }}
+      />
+
+      <PartyDetailDialog
+        isOpen={detailOpen}
+        onClose={setDetailOpen}
+        party={selected}
+        namespace={namespace}
+        writeScope={writeScope}
+        onEdit={openEdit}
       />
 
       <PartyFormDialog

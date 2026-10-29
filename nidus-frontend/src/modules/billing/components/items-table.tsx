@@ -4,7 +4,7 @@ import * as React from "react";
 import { useTranslations } from "next-intl";
 import { useSearchParams } from "next/navigation";
 import { useRouter, usePathname } from "@/core/i18n/routing";
-import { MoreHorizontal, Pencil, Plus, Trash2 } from "lucide-react";
+import { Eye, MoreHorizontal, Pencil, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/shared/ui/button";
@@ -18,6 +18,7 @@ import {
 import { DataTable, ColumnDef } from "@/shared/components/layout/data-table";
 import { CanAccess } from "@/modules/access/components/can-access";
 import { NidusScope } from "@/shared/access/scopes";
+import { formatMoney, formatPercent } from "../lib/format";
 import { CatalogItem } from "../types/item";
 import { PageInfo } from "../types/party";
 import {
@@ -25,6 +26,7 @@ import {
   deleteItemAction,
   updateItemAction,
 } from "../actions/items";
+import { ItemDetailDialog } from "./item-detail-dialog";
 import { ItemFormDialog } from "./item-form-dialog";
 
 interface ItemsTableProps {
@@ -45,6 +47,7 @@ export function ItemsTable({
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const [dialogOpen, setDialogOpen] = React.useState(false);
+  const [detailOpen, setDetailOpen] = React.useState(false);
   const [selected, setSelected] = React.useState<CatalogItem | null>(null);
 
   const replaceQuery = (mutate: (params: URLSearchParams) => void) => {
@@ -59,7 +62,13 @@ export function ItemsTable({
     setDialogOpen(true);
   };
 
+  const openView = (item: CatalogItem) => {
+    setSelected(item);
+    setDetailOpen(true);
+  };
+
   const openEdit = (item: CatalogItem) => {
+    setDetailOpen(false);
     setSelected(item);
     setDialogOpen(true);
   };
@@ -97,21 +106,28 @@ export function ItemsTable({
     },
     {
       header: t("tableUnit"),
+      align: "center",
       cell: (item) => item.unit,
     },
     {
       header: t("tablePrice"),
-      cell: (item) => item.unit_price,
+      align: "right",
+      cell: (item) => formatMoney(item.unit_price),
     },
     {
       header: t("tableTax"),
-      cell: (item) => (item.tax_rate != null ? `${item.tax_rate}%` : "—"),
+      align: "right",
+      cell: (item) => formatPercent(item.tax_rate),
     },
     {
       header: "",
       className: "w-12",
+      align: "right",
       cell: (item) => (
-        <CanAccess scope={NidusScope.ITEM_WRITE}>
+        <div
+          onClick={(event) => event.stopPropagation()}
+          onKeyDown={(event) => event.stopPropagation()}
+        >
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="icon" className="size-8">
@@ -119,20 +135,26 @@ export function ItemsTable({
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => openEdit(item)}>
-                <Pencil className="size-4" />
-                {t("editAction")}
+              <DropdownMenuItem onClick={() => openView(item)}>
+                <Eye className="size-4" />
+                {t("viewAction")}
               </DropdownMenuItem>
-              <DropdownMenuItem
-                className="text-destructive focus:text-destructive"
-                onClick={() => void handleDelete(item)}
-              >
-                <Trash2 className="size-4" />
-                {t("deleteAction")}
-              </DropdownMenuItem>
+              <CanAccess scope={NidusScope.ITEM_WRITE}>
+                <DropdownMenuItem onClick={() => openEdit(item)}>
+                  <Pencil className="size-4" />
+                  {t("editAction")}
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  className="text-destructive focus:text-destructive"
+                  onClick={() => void handleDelete(item)}
+                >
+                  <Trash2 className="size-4" />
+                  {t("deleteAction")}
+                </DropdownMenuItem>
+              </CanAccess>
             </DropdownMenuContent>
           </DropdownMenu>
-        </CanAccess>
+        </div>
       ),
     },
   ];
@@ -158,6 +180,7 @@ export function ItemsTable({
         hasNextPage={pageInfo.has_next_page}
         isFirstPage={!searchParams.get("cursor")}
         initialSearch={searchQuery}
+        onRowClick={openView}
         onSearchChange={(query) => {
           const next = query.trim();
           if (next === searchQuery) return;
@@ -178,6 +201,13 @@ export function ItemsTable({
             params.set("cursor", pageInfo.end_cursor!);
           });
         }}
+      />
+
+      <ItemDetailDialog
+        isOpen={detailOpen}
+        onClose={setDetailOpen}
+        item={selected}
+        onEdit={openEdit}
       />
 
       <ItemFormDialog

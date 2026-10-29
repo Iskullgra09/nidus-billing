@@ -21,6 +21,7 @@ import {
   FormMessage,
 } from "@/shared/ui/form";
 import { ActionResponse } from "@/core/types/api";
+import { formatMoneyInput, formatPercentInput } from "../lib/format";
 import { CatalogItem, ItemPayload } from "../types/item";
 
 const itemSchema = z.object({
@@ -75,8 +76,8 @@ export function ItemFormDialog({
       sku: item?.sku ?? "",
       description: item?.description ?? "",
       unit: item?.unit ?? "unit",
-      unit_price: item?.unit_price ?? "0",
-      tax_rate: item?.tax_rate ?? "",
+      unit_price: formatMoneyInput(item?.unit_price ?? "0"),
+      tax_rate: formatPercentInput(item?.tax_rate),
       is_service: item?.is_service ?? false,
       is_active: item?.is_active ?? true,
     });

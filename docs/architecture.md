@@ -1239,7 +1239,10 @@ Nidus Billing will eventually offer adjacent products (purchases/OC, inventory, 
 2. **`invoice` means sales AR only.** Never add `is_purchase`; inbound supplier documents use dedicated models (B7+).
 3. **Add-ons (post-B9):** purchase orders, AP bills/payments, inventory, payroll, subscriptions, bank transfers — gated later via scopes / org module flags; separate tables and nav entries.
 4. **Fiscal layer:** Hacienda types (FE/TE/NC/ND) attach beside the operational invoice (future `invoice_fiscal`), not by rewriting B2 headers.
+5. **Ingest channels stay phased:** manual drafts (B2), outbound email (B4), Hacienda XML (B6–B7), mailbox (B8). Do not invent a parallel “upload anything” path that bypasses those phases.
+6. **Tax depth later:** B2/B3 keep one optional `tax_rate` % per line for operational totals. Multi-code tax catalogs / withholdings wait for fiscal work (B5–B6); document in README backlog until then.
+7. **Party contacts stay flat for now:** single optional `phone` / `email` on customer & supplier. Multi-phone / multi-address models wait for fiscal/shipping needs (B5/B9 backlog) — avoid premature normalization in B1–B3.
 
 ### Consequences
-* **Positive:** Stable sales schema; clear product packaging later.
-* **Negative:** Some CR shops wanting OC/AP early must wait or use external tools until add-ons land.
+* **Positive:** Stable sales schema; clear product packaging later; product ideas park in README without schema churn.
+* **Negative:** Some CR shops wanting OC/AP or rich tax matrices early must wait or use external tools until those slices land.

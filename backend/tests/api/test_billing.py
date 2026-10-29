@@ -196,3 +196,99 @@ async def test_invoice_lifecycle_and_pdf(auth_client: Tuple[AsyncClient, Dict[st
     issued_credit = await client.post(f"/api/v1/billing/invoices/{credit_id}/issue")
     assert issued_credit.status_code == 200
     assert issued_credit.json()["data"]["status"] == "issued"
+
+
+@pytest.mark.asyncio
+async def test_invoice_draft_delete_and_payment_guards(
+    auth_client: Tuple[AsyncClient, Dict[str, Any]],
+) -> None:
+    client, _ = auth_client
+
+    customer_res = await client.post(
+        "/api/v1/billing/customers",
+        json={"name": "Pay Guards Co", "email": "guards@acme.example"},
+    )
+    assert customer_res.status_code == 201
+    customer_id = customer_res.json()["data"]["id"]
+
+    draft_res = await client.post(
+        "/api/v1/billing/invoices",
+        json={
+            "customer_id": customer_id,
+            "payment_condition": "contado",
+            "lines": [{"description": "Temp", "quantity": "1", "unit_price": "25"}],
+        },
+    )
+    assert draft_res.status_code == 201
+    draft_id = draft_res.json()["data"]["id"]
+
+    delete_draft = await client.delete(f"/api/v1/billing/invoices/{draft_id}")
+    assert delete_draft.status_code == 200
+    missing = await client.get(f"/api/v1/billing/invoices/{draft_id}")
+    assert missing.status_code == 404
+
+    invoice_res = await client.post(
+        "/api/v1/billing/invoices",
+        json={
+            "customer_id": customer_id,
+            "payment_condition": "contado",
+            "lines": [{"description": "Goods", "quantity": "1", "unit_price": "100"}],
+        },
+    )
+    invoice_id = invoice_res.json()["data"]["id"]
+    await client.post(f"/api/v1/billing/invoices/{invoice_id}/issue")
+
+    overpay = await client.post(
+        f"/api/v1/billing/invoices/{invoice_id}/payments",
+        json={"amount": "999.0000", "method": "cash"},
+    )
+    assert overpay.status_code == 400
+
+    pay_res = await client.post(
+        f"/api/v1/billing/invoices/{invoice_id}/payments",
+        json={"amount": "40.0000", "method": "card"},
+    )
+    assert pay_res.status_code == 201
+    assert pay_res.json()["data"]["status"] == "partial"
+    payment_id = pay_res.json()["data"]["payments"][0]["id"]
+
+    listed = await client.get(f"/api/v1/billing/invoices/{invoice_id}/payments")
+    assert listed.status_code == 200
+    assert len(listed.json()["data"]) == 1
+
+    delete_pay = await client.delete(f"/api/v1/billing/invoices/{invoice_id}/payments/{payment_id}")
+    assert delete_pay.status_code == 200
+    restored = delete_pay.json()["data"]
+    assert restored["status"] == "issued"
+    assert restored["amount_paid"] == "0.0000"
+    assert restored["balance_due"] == "100.0000"
+
+
+@pytest.mark.asyncio
+async def test_invoice_overdue_flag(auth_client: Tuple[AsyncClient, Dict[str, Any]]) -> None:
+    client, _ = auth_client
+
+    customer_res = await client.post(
+        "/api/v1/billing/customers",
+        json={"name": "Overdue Co", "email": "overdue@acme.example"},
+    )
+    customer_id = customer_res.json()["data"]["id"]
+
+    create_res = await client.post(
+        "/api/v1/billing/invoices",
+        json={
+            "customer_id": customer_id,
+            "payment_condition": "credito",
+            "due_date": "2020-01-15",
+            "lines": [{"description": "Late", "quantity": "1", "unit_price": "80"}],
+        },
+    )
+    assert create_res.status_code == 201
+    invoice_id = create_res.json()["data"]["id"]
+
+    issued = await client.post(f"/api/v1/billing/invoices/{invoice_id}/issue")
+    assert issued.status_code == 200
+    body = issued.json()["data"]
+    assert body["status"] == "issued"
+    assert body["is_overdue"] is True
+    assert body["balance_due"] == "80.0000"

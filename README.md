@@ -123,8 +123,61 @@ Operational billing (B1–B4) can ship value before fiscal/Hacienda. Email send 
 ### B9 — Hardening, UX polish, domain tests
 
 **Backend:** domain audit events; rate limits on emit/send/credential paths; pytest coverage for billing services & Hacienda adapter fakes.  
-**Frontend:** dashboard widgets (open AR, recent emits, Hacienda failures); Cmd+K completeness; EN/ES polish; empty/error states.  
+**Frontend:** dashboard widgets (open AR, recent emits, Hacienda failures); Cmd+K completeness; EN/ES polish; empty/error states; invoice document-style detail polish.  
 **Quality:** CI keeps backend + frontend gates; add billing-focused specs as modules land.
+
+### Creation & ingest channels (how invoices enter the system)
+
+| Channel | When | Notes |
+| :--- | :--- | :--- |
+| **Manual UI** | B2 now | Draft with ≥1 line → edit lines while draft → issue. Lines are not a separate document; they belong to the invoice. |
+| **Outbound email** | B4 | Send issued PDF (later XML/clave). |
+| **Hacienda XML emit** | B6 | Fiscal layer beside operational invoice. |
+| **Hacienda inbound** | B7 | Supplier e-docs → accept/reject (not sales AR). |
+| **Email mailbox ingest** | B8 | XML/PDF attachments → inbound drafts for triage. |
+
+### UX convention (billing lists)
+
+List tables share one interaction model: **row click → View**, menu = View / Edit / domain actions, Edit also reachable from View.
+
+**Modular piece:** `DataTable` (`shared/components/layout/data-table.tsx`) exposes optional `onRowClick`. Each billing table (customers, suppliers, items, invoices) wires that callback + its own View dialog. The click behavior is shared; the “what you see” is domain-specific — not one mega-table component.
+
+### Operational invoice statuses (B2/B3 — not Hacienda yet)
+
+These are **commercial / AR** states on `invoice.status`. They are **not** Hacienda aceptada/rechazada (that arrives with `invoice_fiscal` in B6+).
+
+| Status | Meaning | Typical next actions |
+| :--- | :--- | :--- |
+| **draft** | Editable; no commercial number yet | Edit, Issue, Delete |
+| **issued** | Number assigned (`INV-######`); open balance = total | Pay, Void (if no payments), PDF |
+| **partial** | Some payments applied; balance &gt; 0 | Pay more, PDF (void blocked if amount_paid &gt; 0) |
+| **paid** | amount_paid covers total; balance 0 | PDF only (no more pay/void) |
+| **void** | Cancelled commercially | PDF / view only |
+
+**Overdue** is a **derived flag** (`is_overdue`), not a stored status: issued/partial + `due_date` &lt; today + balance &gt; 0.
+
+**Actions today:**
+- **View / row click** — read-only document detail (same data).
+- **Edit** — draft only; form shaped like the invoice.
+- **Issue** — draft → issued; allocates series number; freezes lines.
+- **Register payment** — reduces balance; moves issued → partial → paid.
+- **Void** — issued (and unpaid) → void; clears open balance for AR UI. Does **not** talk to Hacienda yet.
+- **PDF** — renders current snapshot (works for any status with data).
+
+**Invoice vs “transaction”:** in this product, the sales document is `invoice` (AR). Cash movement is `invoice_payment` (not a second invoice type). Full journal / GL “transactions” are out of scope until accounting add-ons. Hacienda emit/annul is a **parallel fiscal lifecycle** (B6), not a replacement of these operational states.
+
+### Backlog notes (capture, not in current PR)
+
+Ideas raised during B2/B3 UX that belong later — keep here so they are not lost:
+
+- **Tax catalog / multi-rate lines:** codes beyond a single `%` per line (IVA 1/2/4/13, exento, turismo, retenciones). Fits fiscal depth around **B5–B6**, not rewriting B2 money fields now.
+- **Richer invoice UX:** full-page document route, print CSS, line editor closer to paper invoice; polish in **B9**.
+- **Quotes → invoice:** optional conversion path under operational docs / B9.
+- **Accounting ledger / journal:** explicit non-goal until add-ons; balances stay AR cash application (B3).
+- **Import sales drafts from XML/file:** possible helper before Hacienda; prefer aligning with B6/B8 parsers rather than a one-off upload.
+- **Multi contact / address on parties:** today one optional `phone` (+ email) on customer/supplier. Do **not** expand to `party_phone` / `party_address` tables in B2/B3. Schedule as party enrichment (around **B5** fiscal profile or **B9** polish) when Hacienda needs billing vs shipping addresses and multiple phones.
+- **Dual status model (operational + fiscal):** keep `invoice.status` as above; add Hacienda status on `invoice_fiscal` (aceptada / rechazada / anulada ante MH). Void in UI may later mean “commercial void” and/or “nota de crédito / anulación Hacienda” — ADR when B6 starts.
+- **In-app guidance:** contextual help for complex surfaces (invoice statuses, credit vs cash, issue vs void) — tooltips / short coach marks / help panel. Prefer sparse help on hard concepts, not every control. Schedule under **B9** UX polish (optional small ADR B-006 later).
 
 ---
 
