@@ -2,17 +2,26 @@ from __future__ import annotations
 
 import base64
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import datetime
 from typing import Any, Optional
 
 import httpx
 
 from app.models.billing.enums import HaciendaEnvironment, HaciendaFiscalStatus
 
-SANDBOX_API = "https://api.comprobanteselectronicos.go.cr/recepcion-sandbox/v1"
+from .mh_message import humanize_mh_message
+
+# Legacy host path (.../recepcion-sandbox/v1) returns API Gateway 403 for valid tokens.
+SANDBOX_API = "https://api-sandbox.comprobanteselectronicos.go.cr/recepcion/v1"
 PROD_API = "https://api.comprobanteselectronicos.go.cr/recepcion/v1"
-SANDBOX_IDP = "https://idp.comprobanteselectronicos.go.cr/auth/realms/rut/protocol/openid-connect/token"
-PROD_IDP = "https://idp.comprobanteselectronicos.go.cr/auth/realms/rut/protocol/openid-connect/token"
+SANDBOX_IDP = (
+    "https://idp.comprobanteselectronicos.go.cr/auth/realms/rut-stag"
+    "/protocol/openid-connect/token"
+)
+PROD_IDP = (
+    "https://idp.comprobanteselectronicos.go.cr/auth/realms/rut"
+    "/protocol/openid-connect/token"
+)
 
 
 @dataclass(frozen=True)
@@ -64,10 +73,10 @@ class HaciendaClient:
                 mock=True,
             )
 
-        token = await self._token()
+        token, token_type = await self._token()
         payload: dict[str, Any] = {
             "clave": clave,
-            "fecha": issued_at.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+            "fecha": _format_mh_fecha(issued_at),
             "emisor": {
                 "tipoIdentificacion": emitter_type,
                 "numeroIdentificacion": emitter_number,
@@ -80,11 +89,15 @@ class HaciendaClient:
                 "numeroIdentificacion": receptor_number,
             }
 
+        auth_scheme = (token_type or "bearer").strip() or "bearer"
         async with httpx.AsyncClient(timeout=60.0) as client:
             response = await client.post(
                 f"{self.api_base}/recepcion",
                 json=payload,
-                headers={"Authorization": f"Bearer {token}"},
+                headers={
+                    "Authorization": f"{auth_scheme} {token}",
+                    "Content-Type": "application/json",
+                },
             )
         if response.status_code in {200, 201, 202}:
             return HaciendaSubmitResult(
@@ -113,7 +126,6 @@ class HaciendaClient:
         receptor_number: str,
         xml_signed: str,
     ) -> HaciendaSubmitResult:
-        """Submit receptor accept/reject (MensajeReceptor) for an inbound clave."""
         return await self.submit(
             clave=clave,
             issued_at=issued_at,
@@ -134,11 +146,12 @@ class HaciendaClient:
                 mock=True,
             )
 
-        token = await self._token()
+        token, token_type = await self._token()
+        auth_scheme = (token_type or "bearer").strip() or "bearer"
         async with httpx.AsyncClient(timeout=60.0) as client:
             response = await client.get(
                 f"{self.api_base}/recepcion/{clave}",
-                headers={"Authorization": f"Bearer {token}"},
+                headers={"Authorization": f"{auth_scheme} {token}"},
             )
         if response.status_code != 200:
             return HaciendaSubmitResult(
@@ -151,29 +164,48 @@ class HaciendaClient:
         body = response.json()
         raw = str(body.get("ind-estado") or body.get("estado") or body.get("status") or "").lower()
         mapped = _map_mh_status(raw)
+        response_xml = body.get("respuesta-xml")
+        opaque = response_xml or body.get("mensaje") or raw
+        message = humanize_mh_message(str(opaque) if opaque is not None else None) or (
+            raw or "unknown"
+        )
         return HaciendaSubmitResult(
             status=mapped,
             raw_status=raw or "unknown",
-            message=str(body.get("respuesta-xml") or body.get("mensaje") or raw)[:2000],
-            response_xml=body.get("respuesta-xml"),
+            message=message[:2000],
+            response_xml=response_xml if isinstance(response_xml, str) else None,
             mock=False,
         )
 
-    async def _token(self) -> str:
-        data = {
+    async def _token(self) -> tuple[str, str]:
+        data: dict[str, str] = {
             "grant_type": "password",
+            "client_id": self.client_id or "api-stag",
             "username": self.username,
             "password": self.password,
-            "client_id": self.client_id,
-            "client_secret": self.client_secret,
         }
+        if self.client_secret:
+            data["client_secret"] = self.client_secret
         async with httpx.AsyncClient(timeout=30.0) as client:
             response = await client.post(self.idp_url, data=data)
-        response.raise_for_status()
-        token = response.json().get("access_token")
+        if response.status_code >= 400:
+            detail = (response.text or "")[:300]
+            raise RuntimeError(
+                f"Hacienda IdP auth failed ({response.status_code}): {detail}"
+            )
+        body = response.json()
+        token = body.get("access_token")
         if not token:
             raise RuntimeError("Hacienda IdP did not return access_token")
-        return token
+        token_type = str(body.get("token_type") or "bearer")
+        return str(token), token_type
+
+
+def _format_mh_fecha(issued_at: datetime) -> str:
+    """MH recepción JSON fecha uses compact CR offset, e.g. 2016-01-01T00:00:00-0600."""
+    from .xml_fe import format_fecha_emision_cr
+
+    return format_fecha_emision_cr(issued_at, for_xml=False)
 
 
 def _map_mh_status(raw: str) -> HaciendaFiscalStatus:

@@ -52,6 +52,7 @@ Phases are **product slices**, not Core’s old Phase 1–16 list. Status update
 | **B5** | Org fiscal profile & Hacienda credentials | Done |
 | **B6** | Hacienda outbound — **facturas de venta** emit + verify | Done (mock emit; live XAdES gated) |
 | **B6.1** | XAdES signer + sandbox live path; USD rate on FE; CABYS UI mínimo | Done (mock default; live gated) |
+| **B6.2** | Harden FE emit (local XSD, CR clock, MH messages, resumen) | Done (code; sandbox accept still needs real ATV data) |
 | **B7** | **Facturas de compra** — receive FE XML + accept/reject Hacienda | In progress |
 | **B8** | Correo de compras (mailbox → same purchase inbox) | Planned |
 | **B9** | Hardening, UX polish, quotes→invoice, domain tests | Planned |
@@ -59,13 +60,51 @@ Phases are **product slices**, not Core’s old Phase 1–16 list. Status update
 | **B11** | Party enrichment (multi contact / address) | Planned |
 
 ```text
-B0 → B1 → B2 → B3 → B4 → B5 → B6 → B6.1 → B7 → B8 → B9
-                                                    ↘→ B10 FX (BCCR / reports)
-                                                    ↘→ B11 parties
+B0 → B1 → B2 → B3 → B4 → B5 → B6 → B6.1 → B6.2 → B7 → B8 → B9
+                                                              ↘→ B10 FX (BCCR / reports)
+                                                              ↘→ B11 parties
 Add-ons (post-core): AP/OC, inventory, payroll, subscriptions, treasury
 ```
 
-Operational billing (B1–B4) ships value before fiscal/Hacienda. B5 stores issuer identity and encrypted credentials. B6–B8 are the Hacienda critical path (B6.1 closes **venta** outbound before **compra** inbound). B9–B11 harden product quality after emit/receive work.
+Operational billing (B1–B4) ships value before fiscal/Hacienda. B5 stores issuer identity and encrypted credentials. B6–B6.2 close the **venta** outbound rail (emit/verify + harden). B7–B8 are **compra** inbound. B9–B11 harden product quality after emit/receive work.
+
+### Hacienda FE architecture (Nidus)
+
+The FE motor lives in-process under `backend/app/services/billing/hacienda/`: XML build, local XSD check, XAdES signing, and MH recepción/consulta are part of this app.
+
+```text
+invoice + fiscal profile + credentials
+  → FE XML v4.4
+  → local XSD gate (structure only)
+  → XAdES (.p12)
+  → MH recepción (when HACIENDA_LIVE=true)
+  → verify / later reconciliation
+  → invoice_fiscal (clave, XML, mh_message, status)
+```
+
+| Layer | Role |
+| :--- | :--- |
+| App / UI | Operational invoice, CABYS field, emit/verify actions, Hacienda badge |
+| `xml_fe` | FacturaElectronica v4.4 builder (units, resumen, FechaEmision CR) |
+| `validate_fe` | Vendored `FacturaElectronica_V4.4.xsd` before submit |
+| `signer` | XAdES-EPES with org `.p12` (mock when live is off / no cert) |
+| `client` | ATV IdP token + recepción submit + status GET |
+| `mh_message` | Humanize DetalleMensaje for operators (hide opaque blobs) |
+
+**Sandbox opt-in:** default `HACIENDA_LIVE=false` (mock). Turn live on only with ATV test credentials + matching `.p12`. Verify re-reads MH status for an existing clave; it does **not** rebuild or re-sign XML.
+
+**Honest checklist (venta emit)**
+
+| Area | Status |
+| :--- | :--- |
+| `.p12` + ATV credentials, clave 50, consecutive, persist XML/status | Done |
+| XAdES + recepción submit + manual verify | Done |
+| Local XSD gate, CR `FechaEmision`, UnidadMedida map, resumen FE v4.4, MH message humanize | Done (B6.2) |
+| CABYS | Partial — length 13 / pad only; **no** BCCR catalog check |
+| Medios de pago / series per doc type / email with XML after accept | Partial |
+| Emisor ubicacion + actividad + receptor + CABYS **as registered in ATV/RUT** | Operator data — MH rejects if wrong |
+| Outbox/idempotency, status reconciliation job, signed webhook | Later |
+| NC/ND + InformacionReferencia, tiquete/export/compra **emit**, contingency | Later (not B8) |
 
 ### Product IA (shell) — sales vs purchases
 
@@ -140,6 +179,23 @@ Base billing is **one** product area with **two document rails**, not two unrela
 
 **Shipped:** `signxml` XAdES + mock fallback; invoice FX fields + `TipoCambio`; CABYS on lines/items + emit gates; migration `d2e3f4a5b6c7`; demo seed CRC/USD FE-ready; unit + API tests.  
 **Done when:** mock CI green; XAdES with test `.p12`; USD/CABYS block incomplete emit; UI captures rate + CABYS. ✅
+
+### B6.2 — Harden FE emit (sandbox accept path)
+
+**Goal:** stop burning consecutivos on **structure** errors; make MH rejects readable; align XML with FE v4.4 particle rules. Live MH still rejects bad **registry/catalog** data (ubicacion, actividad RUT, receptor id, real CABYS).
+
+**Backend**
+
+- Vendored FE v4.4 XSD under `backend/app/services/billing/hacienda/schemas/` (+ xmldsig import); `validate_fe` runs on unsigned draft (signature stub) and again on signed XML before recepción.
+- `FechaEmision` in America/Costa_Rica (`-06:00` in XML; compact `-0600` on recepción JSON `fecha`).
+- `UnidadMedida` aliases (`unit`→`Unid`, `hour`→`h`, …); `BaseImponible` before `Impuesto`; resumen with `TotalVenta` / desglose / `MedioPago` for contado.
+- `mh_message.humanize_mh_message` for DetalleMensaje (CABYS length, enum, order, quoted MH text).
+
+**Frontend:** Hacienda status badge + short detail modal (no raw base64/JWT dumps).
+
+**Out of scope:** BCCR CABYS catalog sync; outbox; webhook/reconciliation job; NC/ND emit; mailbox (**B8**).
+
+**Done when:** local XSD fails fast with a clear API error; live sandbox accept depends on ATV-aligned fiscal profile + valid receptor/CABYS (operator setup), not more XML shape fixes. ✅ code; accept E2E = data.
 
 ### B7 — Facturas de compra (Hacienda receive / accept-reject)
 
@@ -218,14 +274,17 @@ These are **commercial / AR** states on `invoice.status`. They are **not** Hacie
 
 ### Backlog notes (not yet a numbered phase)
 
-Promoted: CRC|USD + tax codes → **B6**; dual operational+fiscal → **B6** (ADR B-008); XAdES + sandbox + USD rate on FE + CABYS UI mínimo → **B6.1** (ADR B-009); BCCR FX/reports → **B10**; party multi-contact → **B11**; richer invoice UX / quotes→invoice → **B9**.
+Promoted: CRC|USD + tax codes → **B6**; dual operational+fiscal → **B6** (ADR B-008); XAdES + sandbox + USD rate on FE + CABYS UI mínimo → **B6.1** (ADR B-009); FE structure harden + local XSD → **B6.2**; BCCR FX/reports → **B10**; party multi-contact → **B11**; richer invoice UX / quotes→invoice → **B9**.
 
-Still parked (no phase yet):
+Still parked (no phase yet — do **after** B8 unless a bug blocks venta):
 
 - **Accounting ledger / journal:** explicit non-goal until add-ons; balances stay AR cash application (B3).
 - **Import sales drafts from XML/file:** prefer aligning with B6/B8 parsers rather than a one-off upload helper.
-- **Rich CABYS catalog sync** (search/sync MH codes beyond line field + item default): after B6.1 mínimo; not B7.
-- **NC/ND emit workflows:** after outbound FE is solid (post B6.1).
+- **Rich CABYS catalog sync** (BCCR): after B6.2; length-only check is not enough for MH accept.
+- **Emit outbox + idempotency** and **status reconciliation** (polling job): avoid orphan submits / stuck `submitted`.
+- **NC/ND emit + InformacionReferencia**; tiquete / export / compra **emit**; contingency `situación`.
+- **Post-accept email** with PDF + XML + MensajeHacienda.
+- **Multi-version XML (compat):** after stable emit/receive (post B8/B9). Target **v4.4 + v4.3 + one prior close sibling** for *similar* schemas. Emit stays 4.4-first.
 
 ---
 

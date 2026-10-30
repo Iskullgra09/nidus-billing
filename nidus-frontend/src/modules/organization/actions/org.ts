@@ -120,9 +120,6 @@ export async function updateOrganizationAction(
   }
 }
 
-/**
- * Soft-deletes the active organization, clears the session, and sends the user to login.
- */
 export async function deleteOrganizationAction(): Promise<ActionResponse> {
   const tCommon = await getTranslations("Common");
   const tOrg = await getTranslations("SettingsOrg");

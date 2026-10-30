@@ -106,10 +106,13 @@ def test_xades_sign_with_p12() -> None:
     assert result.mock is False
     assert "Signature" in result.xml_signed
     assert "nidus-mock-xades-epes" not in result.xml_signed
+    assert "SignedProperties" in result.xml_signed
+    # Document + SignedProperties + KeyInfo should carry exclusive C14N.
+    assert result.xml_signed.count("xml-exc-c14n#") >= 3
 
 
 def test_xml_includes_cabys_and_usd_tipo_cambio() -> None:
     xml = _sample_xml(currency="USD", exchange_rate=Decimal("520.00000"))
-    assert "<CodigoCABYS>85171200</CodigoCABYS>" in xml
+    assert "<CodigoCABYS>8517120000000</CodigoCABYS>" in xml
     assert "<CodigoMoneda>USD</CodigoMoneda>" in xml
     assert "<TipoCambio>520.00000</TipoCambio>" in xml

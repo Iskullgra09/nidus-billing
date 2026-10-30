@@ -127,17 +127,18 @@ ACME_CUSTOMERS: List[Dict[str, Any]] = [
     },
 ]
 
+# Emisor id/name must match the ATV sandbox .p12 subject; override in Settings → Fiscal if needed.
 ACME_FISCAL_PROFILE: Dict[str, Any] = {
-    "legal_name": "Acme Costa Rica SA",
-    "trade_name": "Acme Corp",
-    "identification_type": IdentificationType.JURIDICA.value,
-    "identification_number": "3101123456",
+    "legal_name": "ISAAC JOSE GRANADOS QUESADA",
+    "trade_name": "Nidus Billing Sandbox",
+    "identification_type": IdentificationType.FISICA.value,
+    "identification_number": "207510859",
     "economic_activity_code": "620100",
     "branch_code": "001",
     "province": "1",
     "canton": "01",
     "district": "01",
-    "other_signs": "Demo fiscal profile for mock Hacienda emit",
+    "other_signs": "Direccion registrada en ATV sandbox (actualizar si MH rechaza ubicacion)",
     "phone": "22223344",
     "email": "fiscal@acme.dev",
     "country_code": "CR",
@@ -160,46 +161,46 @@ ACME_ITEMS: List[Dict[str, Any]] = [
     {
         "sku": "SRV-CONSULT",
         "name": "Consulting hour",
-        "unit": "hour",
+        "unit": "h",
         "unit_price": Decimal("75000.0000"),
         "tax_rate": Decimal("13"),
-        "cabys_code": "83119900",
+        "cabys_code": "8311990000000",
         "is_service": True,
     },
     {
         "sku": "SRV-SUPPORT",
         "name": "Support retainer",
-        "unit": "month",
+        "unit": "Spe",
         "unit_price": Decimal("250000.0000"),
         "tax_rate": Decimal("13"),
-        "cabys_code": "83119900",
+        "cabys_code": "8311990000000",
         "is_service": True,
     },
     {
         "sku": "PRD-WIDGET",
         "name": "Widget Pro",
-        "unit": "unit",
+        "unit": "Unid",
         "unit_price": Decimal("45000.0000"),
         "tax_rate": Decimal("13"),
-        "cabys_code": "84714900",
+        "cabys_code": "8471490000000",
         "is_service": False,
     },
     {
         "sku": "PRD-CABLE",
         "name": "USB-C cable",
-        "unit": "unit",
+        "unit": "Unid",
         "unit_price": Decimal("8500.0000"),
         "tax_rate": Decimal("13"),
-        "cabys_code": "85444200",
+        "cabys_code": "8544420000000",
         "is_service": False,
     },
     {
         "sku": "SRV-USD-HOUR",
         "name": "USD consulting hour",
-        "unit": "hour",
+        "unit": "h",
         "unit_price": Decimal("85.0000"),
         "tax_rate": Decimal("13"),
-        "cabys_code": "83119900",
+        "cabys_code": "8311990000000",
         "is_service": True,
     },
 ]
@@ -208,10 +209,10 @@ NIDUS_ITEMS: List[Dict[str, Any]] = [
     {
         "sku": "LAB-HOURS",
         "name": "Lab engineering hour",
-        "unit": "hour",
+        "unit": "h",
         "unit_price": Decimal("90000.0000"),
         "tax_rate": Decimal("13"),
-        "cabys_code": "83119900",
+        "cabys_code": "8311990000000",
         "is_service": True,
     },
 ]
@@ -546,8 +547,33 @@ async def _ensure_invoice(
     payments: Optional[List[Dict[str, Any]]] = None,
     void: bool = False,
 ) -> Invoice:
+    from app.services.billing.hacienda.xml_fe import (
+        normalize_cabys_code,
+        normalize_unidad_medida,
+    )
+
     existing = await _find_invoice_by_reference(session, org_id, reference_number)
     if existing:
+        LineModel = cast(Any, InvoiceLine)
+        existing_lines = (
+            await session.execute(
+                select(InvoiceLine)
+                .where(LineModel.invoice_id == existing.id)
+                .order_by(LineModel.line_number)
+            )
+        ).scalars().all()
+        for index, raw in enumerate(lines, start=1):
+            if index > len(existing_lines):
+                break
+            item: Optional[Item] = raw.get("item")
+            line = existing_lines[index - 1]
+            cabys = raw.get("cabys_code") or (item.cabys_code if item else None)
+            normalized = normalize_cabys_code(cabys)
+            if normalized:
+                line.cabys_code = normalized
+            unit = raw.get("unit") or (item.unit if item else None)
+            if unit:
+                line.unit = normalize_unidad_medida(unit)
         return existing
 
     invoice = Invoice(
@@ -585,7 +611,9 @@ async def _ensure_invoice(
                 item_id=item.id if item else None,
                 description=raw["description"],
                 sku=item.sku if item else raw.get("sku"),
-                unit=raw.get("unit") or (item.unit if item else "unit"),
+                unit=normalize_unidad_medida(
+                    raw.get("unit") or (item.unit if item else "Unid")
+                ),
                 quantity=quantity,
                 unit_price=unit_price,
                 tax_rate=tax_rate,
@@ -632,7 +660,7 @@ async def _ensure_invoice(
         invoice.amount_paid = Decimal("0")
         invoice.balance_due = Decimal("0")
 
-    # Keep draft totals when not issued
+    # Draft seed path: do not flip status when only attaching payments later.
     if status == InvoiceStatus.DRAFT.value and not issue and not void:
         invoice.status = InvoiceStatus.DRAFT.value
 
@@ -666,6 +694,18 @@ async def _seed_billing_demo(session: AsyncSession, orgs: Dict[str, Organization
         },
     )
 
+    def _line(item: Item, quantity: Decimal | int) -> Dict[str, Any]:
+        """Copy CABYS, unit, and tax from the catalog item onto the invoice line."""
+        return {
+            "item": item,
+            "description": item.name,
+            "quantity": quantity,
+            "unit_price": item.unit_price,
+            "tax_rate": item.tax_rate,
+            "cabys_code": item.cabys_code,
+            "unit": item.unit,
+        }
+
     widget = items["PRD-WIDGET"]
     consult = items["SRV-CONSULT"]
     support = items["SRV-SUPPORT"]
@@ -683,22 +723,7 @@ async def _seed_billing_demo(session: AsyncSession, orgs: Dict[str, Organization
         payment_condition=PaymentCondition.CONTADO.value,
         status=InvoiceStatus.DRAFT.value,
         notes="Demo draft CRC — edit / issue / delete in UI",
-        lines=[
-            {
-                "item": widget,
-                "description": widget.name,
-                "quantity": 2,
-                "unit_price": widget.unit_price,
-                "tax_rate": widget.tax_rate,
-            },
-            {
-                "item": cable,
-                "description": cable.name,
-                "quantity": 5,
-                "unit_price": cable.unit_price,
-                "tax_rate": cable.tax_rate,
-            },
-        ],
+        lines=[_line(widget, 2), _line(cable, 5)],
     )
 
     await _ensure_invoice(
@@ -710,15 +735,7 @@ async def _seed_billing_demo(session: AsyncSession, orgs: Dict[str, Organization
         status=InvoiceStatus.ISSUED.value,
         notes="Demo issued unpaid CRC — register a payment",
         issue=True,
-        lines=[
-            {
-                "item": support,
-                "description": support.name,
-                "quantity": 1,
-                "unit_price": support.unit_price,
-                "tax_rate": support.tax_rate,
-            }
-        ],
+        lines=[_line(support, 1)],
     )
 
     await _ensure_invoice(
@@ -731,15 +748,7 @@ async def _seed_billing_demo(session: AsyncSession, orgs: Dict[str, Organization
         notes="Demo partial — balance still due",
         due_date=date.today() + timedelta(days=15),
         issue=True,
-        lines=[
-            {
-                "item": consult,
-                "description": consult.name,
-                "quantity": 10,
-                "unit_price": consult.unit_price,
-                "tax_rate": consult.tax_rate,
-            }
-        ],
+        lines=[_line(consult, 10)],
         payments=[{"amount": Decimal("200000.0000"), "method": PaymentMethod.TRANSFER.value}],
     )
 
@@ -752,15 +761,7 @@ async def _seed_billing_demo(session: AsyncSession, orgs: Dict[str, Organization
         status=InvoiceStatus.PAID.value,
         notes="Demo paid — PDF download",
         issue=True,
-        lines=[
-            {
-                "item": cable,
-                "description": cable.name,
-                "quantity": 4,
-                "unit_price": cable.unit_price,
-                "tax_rate": cable.tax_rate,
-            }
-        ],
+        lines=[_line(cable, 4)],
         payments=[{"amount": Decimal("38420.0000"), "method": PaymentMethod.CASH.value}],
     )
 
@@ -774,15 +775,7 @@ async def _seed_billing_demo(session: AsyncSession, orgs: Dict[str, Organization
         notes="Demo overdue credit invoice",
         due_date=date.today() - timedelta(days=10),
         issue=True,
-        lines=[
-            {
-                "item": widget,
-                "description": widget.name,
-                "quantity": 1,
-                "unit_price": widget.unit_price,
-                "tax_rate": widget.tax_rate,
-            }
-        ],
+        lines=[_line(widget, 1)],
     )
 
     await _ensure_invoice(
@@ -801,8 +794,8 @@ async def _seed_billing_demo(session: AsyncSession, orgs: Dict[str, Organization
                 "quantity": 1,
                 "unit_price": Decimal("10000.0000"),
                 "tax_rate": Decimal("13"),
-                "cabys_code": "83119900",
-                "unit": "unit",
+                "cabys_code": "8311990000000",
+                "unit": "Unid",
             }
         ],
     )
@@ -811,20 +804,36 @@ async def _seed_billing_demo(session: AsyncSession, orgs: Dict[str, Organization
         session,
         org_id=acme_id,
         customer_id=ferreteria.id,
-        reference_number="SEED-FE-READY-001",
+        reference_number="SEED-FE-SBX-CRC-001",
         payment_condition=PaymentCondition.CONTADO.value,
         status=InvoiceStatus.ISSUED.value,
-        notes="Demo CRC issued + CABYS — ready for mock Emit to Hacienda",
+        notes="Sandbox #1 CRC — Emit Hacienda (consulting)",
         issue=True,
-        lines=[
-            {
-                "item": consult,
-                "description": consult.name,
-                "quantity": 2,
-                "unit_price": consult.unit_price,
-                "tax_rate": consult.tax_rate,
-            }
-        ],
+        lines=[_line(consult, 2)],
+    )
+
+    await _ensure_invoice(
+        session,
+        org_id=acme_id,
+        customer_id=cafe.id,
+        reference_number="SEED-FE-SBX-CRC-002",
+        payment_condition=PaymentCondition.CONTADO.value,
+        status=InvoiceStatus.ISSUED.value,
+        notes="Sandbox #2 CRC — Emit Hacienda (support + cable)",
+        issue=True,
+        lines=[_line(support, 1), _line(cable, 3)],
+    )
+
+    await _ensure_invoice(
+        session,
+        org_id=acme_id,
+        customer_id=clinica.id,
+        reference_number="SEED-FE-SBX-CRC-003",
+        payment_condition=PaymentCondition.CONTADO.value,
+        status=InvoiceStatus.ISSUED.value,
+        notes="Sandbox #3 CRC — Emit Hacienda (widget)",
+        issue=True,
+        lines=[_line(widget, 1)],
     )
 
     await _ensure_invoice(
@@ -837,39 +846,23 @@ async def _seed_billing_demo(session: AsyncSession, orgs: Dict[str, Organization
         currency="USD",
         exchange_rate=Decimal("520.00000"),
         exchange_rate_date=date.today(),
-        notes="Demo USD draft — edit rate / CABYS then issue",
-        lines=[
-            {
-                "item": usd_hour,
-                "description": usd_hour.name,
-                "quantity": 4,
-                "unit_price": usd_hour.unit_price,
-                "tax_rate": usd_hour.tax_rate,
-            }
-        ],
+        notes="Demo USD draft — edit rate then issue",
+        lines=[_line(usd_hour, 4)],
     )
 
     await _ensure_invoice(
         session,
         org_id=acme_id,
         customer_id=clinica.id,
-        reference_number="SEED-USD-ISSUED-001",
+        reference_number="SEED-FE-SBX-USD-001",
         payment_condition=PaymentCondition.CONTADO.value,
         status=InvoiceStatus.ISSUED.value,
         currency="USD",
         exchange_rate=Decimal("520.00000"),
         exchange_rate_date=date.today(),
-        notes="Demo USD issued + rate + CABYS — ready for mock Emit to Hacienda",
+        notes="Sandbox #4 USD — Emit Hacienda (rate + CABYS)",
         issue=True,
-        lines=[
-            {
-                "item": usd_hour,
-                "description": usd_hour.name,
-                "quantity": 3,
-                "unit_price": usd_hour.unit_price,
-                "tax_rate": usd_hour.tax_rate,
-            }
-        ],
+        lines=[_line(usd_hour, 3)],
     )
 
 
@@ -894,18 +887,24 @@ def _print_summary() -> None:
         print(f"  - {email} -> {org_slug} as {role_name}")
     print("")
     print("Acme billing demo (reference_number):")
-    print("  SEED-DRAFT-001        CRC draft")
-    print("  SEED-ISSUED-001       CRC issued unpaid")
-    print("  SEED-PARTIAL-001      CRC partial")
-    print("  SEED-PAID-001         CRC paid + PDF")
-    print("  SEED-OVERDUE-001      CRC credit overdue")
-    print("  SEED-VOID-001         CRC void")
-    print("  SEED-FE-READY-001     CRC issued + CABYS → mock Emit Hacienda")
-    print("  SEED-USD-DRAFT-001    USD draft + rate")
-    print("  SEED-USD-ISSUED-001   USD issued + rate + CABYS → mock Emit Hacienda")
+    print("  SEED-DRAFT-001          CRC draft")
+    print("  SEED-ISSUED-001         CRC issued unpaid")
+    print("  SEED-PARTIAL-001        CRC partial")
+    print("  SEED-PAID-001           CRC paid + PDF")
+    print("  SEED-OVERDUE-001        CRC credit overdue")
+    print("  SEED-VOID-001           CRC void")
+    print("  SEED-USD-DRAFT-001      USD draft + rate")
     print("")
-    print("Acme also has fiscal profile (3101123456) for Hacienda emit.")
-    print("Catalog items include cabys_code defaults (incl. SRV-USD-HOUR).")
+    print("Sandbox Hacienda emit (all lines have CABYS + tax_code):")
+    print("  SEED-FE-SBX-CRC-001     CRC consulting → Emit")
+    print("  SEED-FE-SBX-CRC-002     CRC support+cable → Emit")
+    print("  SEED-FE-SBX-CRC-003     CRC widget → Emit")
+    print("  SEED-FE-SBX-USD-001     USD hour + rate → Emit")
+    print("")
+    print(
+        "Fiscal seed uses fisica 207510859 (ATV sandbox cert). "
+        "If your .p12 differs, update Settings → Fiscal (or ACME_FISCAL_PROFILE)."
+    )
     print("")
     print("Suggested logins:")
     print("  owner@acme.dev     full Owner + audit on Acme")

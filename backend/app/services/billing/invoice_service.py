@@ -100,6 +100,7 @@ class InvoiceService:
         invoice: Invoice,
         customer_name: str | None,
         hacienda_status: str | None = None,
+        hacienda_message: str | None = None,
     ) -> InvoiceListItem:
         return InvoiceListItem(
             id=invoice.id,
@@ -122,6 +123,7 @@ class InvoiceService:
             balance_due=invoice.balance_due,
             is_overdue=InvoiceService._is_overdue(invoice),
             hacienda_status=hacienda_status,
+            hacienda_message=hacienda_message,
             created_at=invoice.created_at,
             updated_at=invoice.updated_at,
         )
@@ -346,22 +348,35 @@ class InvoiceService:
             ).all()
             names = {row[0]: row[1] for row in name_rows}
 
-        fiscal_by_invoice: dict[UUID, str] = {}
+        fiscal_by_invoice: dict[UUID, tuple[str, str | None]] = {}
         invoice_ids = [row.id for row in rows]
         if invoice_ids:
+            from app.services.billing.hacienda import humanize_mh_message
+
             Fiscal = cast(Any, InvoiceFiscal)
             fiscal_rows = (
                 await session.execute(
-                    select(Fiscal.invoice_id, Fiscal.status).where(Fiscal.invoice_id.in_(invoice_ids))
+                    select(
+                        Fiscal.invoice_id,
+                        Fiscal.status,
+                        Fiscal.mh_message,
+                        Fiscal.mh_response_xml,
+                    ).where(Fiscal.invoice_id.in_(invoice_ids))
                 )
             ).all()
-            fiscal_by_invoice = {row[0]: row[1] for row in fiscal_rows}
+            fiscal_by_invoice = {
+                row[0]: (
+                    row[1],
+                    humanize_mh_message(row[2]) or humanize_mh_message(row[3]),
+                )
+                for row in fiscal_rows
+            }
 
         items = [
             InvoiceService._to_list_item(
                 row,
                 names.get(row.customer_id),
-                fiscal_by_invoice.get(row.id),
+                *(fiscal_by_invoice.get(row.id) or (None, None)),
             )
             for row in rows
         ]

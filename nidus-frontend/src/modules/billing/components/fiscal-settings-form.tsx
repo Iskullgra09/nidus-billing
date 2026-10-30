@@ -7,6 +7,7 @@ import { useRouter } from "@/core/i18n/routing";
 
 import { Button } from "@/shared/ui/button";
 import { Input } from "@/shared/ui/input";
+import { PasswordInput } from "@/shared/ui/password-input";
 import { Label } from "@/shared/ui/label";
 import {
   Select,
@@ -27,6 +28,12 @@ import {
   HaciendaEnvironment,
   IdentificationType,
 } from "../types/fiscal";
+import {
+  CR_CANTONS,
+  CR_DISTRICTS,
+  CR_PROVINCES,
+  crDistrictKey,
+} from "../lib/cr-ubicacion";
 
 interface FiscalSettingsFormProps {
   profile: FiscalProfile | null;
@@ -81,6 +88,22 @@ export function FiscalSettingsForm({
   );
   const [oauthSecret, setOauthSecret] = React.useState("");
   const [p12File, setP12File] = React.useState<File | null>(null);
+
+  const cantonOptions = CR_CANTONS[province] ?? [];
+  const districtOptions = CR_DISTRICTS[crDistrictKey(province, canton)] ?? [];
+  const legalNameLabel =
+    idType === "juridica" ? t("legalNameCompany") : t("legalNamePerson");
+
+  const onProvinceChange = (value: string) => {
+    setProvince(value);
+    setCanton("");
+    setDistrict("");
+  };
+
+  const onCantonChange = (value: string) => {
+    setCanton(value);
+    setDistrict("");
+  };
 
   const saveProfile = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -152,7 +175,7 @@ export function FiscalSettingsForm({
         </div>
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="space-y-2 sm:col-span-2">
-            <Label htmlFor="legal_name">{t("legalName")}</Label>
+            <Label htmlFor="legal_name">{legalNameLabel}</Label>
             <Input
               id="legal_name"
               value={legalName}
@@ -160,14 +183,16 @@ export function FiscalSettingsForm({
               required
             />
           </div>
-          <div className="space-y-2 sm:col-span-2">
-            <Label htmlFor="trade_name">{t("tradeName")}</Label>
-            <Input
-              id="trade_name"
-              value={tradeName}
-              onChange={(e) => setTradeName(e.target.value)}
-            />
-          </div>
+          {idType === "juridica" ? (
+            <div className="space-y-2 sm:col-span-2">
+              <Label htmlFor="trade_name">{t("tradeName")}</Label>
+              <Input
+                id="trade_name"
+                value={tradeName}
+                onChange={(e) => setTradeName(e.target.value)}
+              />
+            </div>
+          ) : null}
           <div className="space-y-2">
             <Label>{t("identificationType")}</Label>
             <Select
@@ -201,6 +226,7 @@ export function FiscalSettingsForm({
               id="activity"
               value={activity}
               onChange={(e) => setActivity(e.target.value)}
+              placeholder={t("economicActivityPlaceholder")}
             />
           </div>
           <div className="space-y-2">
@@ -209,31 +235,64 @@ export function FiscalSettingsForm({
               id="branch"
               value={branch}
               onChange={(e) => setBranch(e.target.value)}
+              placeholder={t("branchCodePlaceholder")}
             />
           </div>
-          <div className="space-y-2">
-            <Label htmlFor="province">{t("province")}</Label>
-            <Input
-              id="province"
-              value={province}
-              onChange={(e) => setProvince(e.target.value)}
-            />
+          <div className="sm:col-span-2 pt-2">
+            <h4 className="text-sm font-medium">{t("domicileTitle")}</h4>
           </div>
           <div className="space-y-2">
-            <Label htmlFor="canton">{t("canton")}</Label>
-            <Input
-              id="canton"
-              value={canton}
-              onChange={(e) => setCanton(e.target.value)}
-            />
+            <Label>{t("province")}</Label>
+            <Select value={province || undefined} onValueChange={onProvinceChange}>
+              <SelectTrigger>
+                <SelectValue placeholder={t("selectLocation")} />
+              </SelectTrigger>
+              <SelectContent>
+                {CR_PROVINCES.map((item) => (
+                  <SelectItem key={item.code} value={item.code}>
+                    {item.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
           <div className="space-y-2">
-            <Label htmlFor="district">{t("district")}</Label>
-            <Input
-              id="district"
-              value={district}
-              onChange={(e) => setDistrict(e.target.value)}
-            />
+            <Label>{t("canton")}</Label>
+            <Select
+              value={canton || undefined}
+              onValueChange={onCantonChange}
+              disabled={!province}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder={t("selectLocation")} />
+              </SelectTrigger>
+              <SelectContent>
+                {cantonOptions.map((item) => (
+                  <SelectItem key={item.code} value={item.code}>
+                    {item.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-2">
+            <Label>{t("district")}</Label>
+            <Select
+              value={district || undefined}
+              onValueChange={setDistrict}
+              disabled={!canton}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder={t("selectLocation")} />
+              </SelectTrigger>
+              <SelectContent>
+                {districtOptions.map((item) => (
+                  <SelectItem key={item.code} value={item.code}>
+                    {item.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
           <div className="space-y-2">
             <Label htmlFor="phone">{t("phone")}</Label>
@@ -322,22 +381,26 @@ export function FiscalSettingsForm({
           </div>
           <div className="space-y-2">
             <Label htmlFor="p12_pass">{t("p12Password")}</Label>
-            <Input
+            <PasswordInput
               id="p12_pass"
-              type="password"
               value={p12Password}
               onChange={(e) => setP12Password(e.target.value)}
               autoComplete="new-password"
+              placeholder={
+                credentials?.has_p12 ? t("secretLeaveBlank") : undefined
+              }
             />
           </div>
           <div className="space-y-2">
             <Label htmlFor="pin">{t("pin")}</Label>
-            <Input
+            <PasswordInput
               id="pin"
-              type="password"
               value={pin}
               onChange={(e) => setPin(e.target.value)}
               autoComplete="new-password"
+              placeholder={
+                credentials?.configured ? t("secretLeaveBlank") : undefined
+              }
             />
           </div>
           <div className="space-y-2">
@@ -347,16 +410,19 @@ export function FiscalSettingsForm({
               value={oauthClientId}
               onChange={(e) => setOauthClientId(e.target.value)}
               autoComplete="off"
+              placeholder="api-stag"
             />
           </div>
           <div className="space-y-2">
             <Label htmlFor="oauth_secret">{t("oauthClientSecret")}</Label>
-            <Input
+            <PasswordInput
               id="oauth_secret"
-              type="password"
               value={oauthSecret}
               onChange={(e) => setOauthSecret(e.target.value)}
               autoComplete="new-password"
+              placeholder={
+                credentials?.configured ? t("secretLeaveBlank") : undefined
+              }
             />
           </div>
         </div>

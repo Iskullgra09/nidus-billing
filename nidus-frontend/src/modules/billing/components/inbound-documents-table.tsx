@@ -327,7 +327,7 @@ export function InboundDocumentsTable({
               </div>
               <div>
                 <dt className="text-muted-foreground">{t("fieldMessage")}</dt>
-                <dd>{selected.mh_message || "—"}</dd>
+                <dd className="whitespace-pre-wrap">{selected.mh_message || "—"}</dd>
               </div>
             </dl>
             {selected.mock_mode && (

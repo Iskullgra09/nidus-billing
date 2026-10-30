@@ -37,10 +37,18 @@ from app.services.billing.hacienda import (
     HaciendaClient,
     build_consecutive,
     build_mensaje_receptor_xml,
+    humanize_mh_message,
     parse_inbound_factura_xml,
     sign_factura_xml,
 )
 from app.services.billing.hacienda.xml_mensaje import MensajeReceptorInput
+
+
+def _humanize_inbound_mh_message(
+    mh_message: str | None,
+    mh_response_xml: str | None,
+) -> str | None:
+    return humanize_mh_message(mh_message) or humanize_mh_message(mh_response_xml)
 
 
 class HaciendaInboundService:
@@ -78,7 +86,7 @@ class HaciendaInboundService:
             mensaje_submitted_at=row.mensaje_submitted_at,
             mh_response_at=row.mh_response_at,
             mh_status_raw=row.mh_status_raw,
-            mh_message=row.mh_message,
+            mh_message=_humanize_inbound_mh_message(row.mh_message, row.mh_response_xml),
             mock_mode=row.mock_mode,
             notes=row.notes,
             received_at=row.received_at,
