@@ -8,6 +8,9 @@ from app.services.billing.hacienda.xml_fe import (
     build_factura_electronica_xml,
     format_fecha_emision_cr,
     normalize_cabys_code,
+    normalize_canton,
+    normalize_distrito,
+    normalize_provincia,
     normalize_unidad_medida,
 )
 
@@ -25,6 +28,15 @@ def test_format_fecha_emision_uses_cr_offset() -> None:
 def test_normalize_cabys_pads_to_13() -> None:
     assert normalize_cabys_code("85444200") == "8544420000000"
     assert normalize_cabys_code("8311990000000") == "8311990000000"
+
+
+def test_normalize_ubicacion_codes_and_aliases() -> None:
+    assert normalize_provincia("1") == "1"
+    assert normalize_provincia("San José") == "1"
+    assert normalize_canton("1", "1") == "01"
+    assert normalize_canton("Central", "1") == "01"
+    assert normalize_distrito("Carmen", "1", "01") == "01"
+    assert normalize_distrito("01", "1", "01") == "01"
 
 
 def test_normalize_unidad_medida_aliases() -> None:

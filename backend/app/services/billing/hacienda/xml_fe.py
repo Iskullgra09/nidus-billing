@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import re
+import unicodedata
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from decimal import Decimal
@@ -14,12 +16,67 @@ except ZoneInfoNotFoundError:
     _CR_TZ = timezone(timedelta(hours=-6))
 
 
-def format_fecha_emision_cr(issued_at: datetime, *, for_xml: bool = True) -> str:
-    """Costa Rica local timestamp for FE.
+def _fold_ascii(value: str) -> str:
+    return (
+        unicodedata.normalize("NFKD", value)
+        .encode("ascii", "ignore")
+        .decode("ascii")
+        .strip()
+        .lower()
+    )
 
-    XML ``FechaEmision`` is ``xs:dateTime`` (offset with colon, e.g. ``-06:00``).
-    Recepción JSON ``fecha`` uses the compact form Hacienda examples show (``-0600``).
-    """
+
+_PROVINCIA_ALIASES: dict[str, str] = {
+    "san jose": "1",
+    "alajuela": "2",
+    "cartago": "3",
+    "heredia": "4",
+    "guanacaste": "5",
+    "puntarenas": "6",
+    "limon": "7",
+}
+
+# MH Ubicacion wants digits; map a few legacy free-text values still in DB/fixtures.
+_CANTON_ALIASES: dict[str, dict[str, str]] = {
+    "1": {"central": "01", "san jose": "01"},
+}
+_DISTRITO_ALIASES: dict[str, dict[str, str]] = {
+    "1|01": {"carmen": "01"},
+}
+
+
+def normalize_provincia(value: str | None) -> str:
+    raw = (value or "").strip()
+    if re.fullmatch(r"[1-7]", raw):
+        return raw
+    mapped = _PROVINCIA_ALIASES.get(_fold_ascii(raw))
+    if mapped:
+        return mapped
+    return raw or "1"
+
+
+def normalize_canton(value: str | None, provincia: str) -> str:
+    raw = (value or "").strip()
+    if re.fullmatch(r"\d{1,2}", raw):
+        return raw.zfill(2)
+    mapped = _CANTON_ALIASES.get(provincia, {}).get(_fold_ascii(raw))
+    if mapped:
+        return mapped
+    return raw.zfill(2) if raw.isdigit() else (raw or "01")
+
+
+def normalize_distrito(value: str | None, provincia: str, canton: str) -> str:
+    raw = (value or "").strip()
+    if re.fullmatch(r"\d{1,2}", raw):
+        return raw.zfill(2)
+    mapped = _DISTRITO_ALIASES.get(f"{provincia}|{canton}", {}).get(_fold_ascii(raw))
+    if mapped:
+        return mapped
+    return raw.zfill(2) if raw.isdigit() else (raw or "01")
+
+
+def format_fecha_emision_cr(issued_at: datetime, *, for_xml: bool = True) -> str:
+    """CR local time: XML FechaEmision uses ``-06:00``; recepción JSON ``fecha`` uses ``-0600``."""
     local = issued_at
     if local.tzinfo is None:
         local = local.replace(tzinfo=timezone.utc)
@@ -173,9 +230,12 @@ def build_factura_electronica_xml(data: FacturaElectronicaInput) -> str:
     _text(ident, "Numero", data.emitter.identification_number)
     if data.emitter.province or data.emitter.canton or data.emitter.district:
         ubicacion = SubElement(emisor, "Ubicacion")
-        _text(ubicacion, "Provincia", data.emitter.province or "1")
-        _text(ubicacion, "Canton", data.emitter.canton or "01")
-        _text(ubicacion, "Distrito", data.emitter.district or "01")
+        provincia = normalize_provincia(data.emitter.province)
+        canton = normalize_canton(data.emitter.canton, provincia)
+        distrito = normalize_distrito(data.emitter.district, provincia, canton)
+        _text(ubicacion, "Provincia", provincia)
+        _text(ubicacion, "Canton", canton)
+        _text(ubicacion, "Distrito", distrito)
         # FE XSD requires OtrasSenas minLength 5.
         otras = (data.emitter.other_signs or "").strip() or "Costa Rica"
         if len(otras) < 5:

@@ -93,6 +93,16 @@ invoice + fiscal profile + credentials
 
 **Sandbox opt-in:** default `HACIENDA_LIVE=false` (mock). Turn live on only with ATV test credentials + matching `.p12`. Verify re-reads MH status for an existing clave; it does **not** rebuild or re-sign XML.
 
+**Fiscal profile codes for FE XML**
+
+| Field | FE / XSD | Notes |
+| :--- | :--- | :--- |
+| Provincia / Cantón / Distrito | Digits `1`–`7` / `01`–`N` / `01`–`N` | UI stores codes (`cr-ubicacion`); builder also maps a few legacy names (e.g. San José→`1`) |
+| OtrasSenas | minLength 5 | Padded if too short |
+| Actividad económica | Código RUT of the ATV subject | Must match what MH has for the emisor |
+| CABYS | 13 digits (pad) | Length only — not BCCR catalog |
+| `.p12` upload | Parsed at save time | Wrong password / corrupt file rejected before encrypt |
+
 **Honest checklist (venta emit)**
 
 | Area | Status |
@@ -103,6 +113,7 @@ invoice + fiscal profile + credentials
 | CABYS | Partial — length 13 / pad only; **no** BCCR catalog check |
 | Medios de pago / series per doc type / email with XML after accept | Partial |
 | Emisor ubicacion + actividad + receptor + CABYS **as registered in ATV/RUT** | Operator data — MH rejects if wrong |
+| Shared FE format helpers module (`fe_money`, fecha CR, ubicacion, CABYS, unidades) | Later — today colocated in `xml_fe` (and `_money` duplicated in `xml_mensaje`); extract before NC/ND / more XML types |
 | Outbox/idempotency, status reconciliation job, signed webhook | Later |
 | NC/ND + InformacionReferencia, tiquete/export/compra **emit**, contingency | Later (not B8) |
 
@@ -281,6 +292,7 @@ Still parked (no phase yet — do **after** B8 unless a bug blocks venta):
 - **Accounting ledger / journal:** explicit non-goal until add-ons; balances stay AR cash application (B3).
 - **Import sales drafts from XML/file:** prefer aligning with B6/B8 parsers rather than a one-off upload helper.
 - **Rich CABYS catalog sync** (BCCR): after B6.2; length-only check is not enough for MH accept.
+- **Extract shared Hacienda FE format helpers** (decision B6.2 follow-up): move `format_fecha_emision_cr`, FE money (5 dp), `normalize_provincia|canton|distrito`, CABYS pad, UnidadMedida aliases out of `xml_fe` into something like `hacienda/format.py` (or split files); dedupe `_money` with `xml_mensaje`; export from the package; keep UI money (`format.ts` / AR 2–4 dp) separate. Do this **before** growing more XML builders (NC/ND, etc.) so every document type reuses one formatting layer. Frontend `cr-ubicacion` stays the UI catalog; backend only needs code normalize + small legacy-name map.
 - **Emit outbox + idempotency** and **status reconciliation** (polling job): avoid orphan submits / stuck `submitted`.
 - **NC/ND emit + InformacionReferencia**; tiquete / export / compra **emit**; contingency `situación`.
 - **Post-accept email** with PDF + XML + MensajeHacienda.
