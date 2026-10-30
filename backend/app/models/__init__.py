@@ -6,6 +6,7 @@ from .billing.hacienda_credential import (
     OrganizationHaciendaCredential as OrganizationHaciendaCredential,
 )
 from .billing.inbound_document import InboundFiscalDocument as InboundFiscalDocument
+from .billing.inbound_mailbox import OrganizationInboundMailbox as OrganizationInboundMailbox
 from .billing.invoice import Invoice as Invoice
 from .billing.invoice import InvoiceLine as InvoiceLine
 from .billing.invoice_email import InvoiceEmailDelivery as InvoiceEmailDelivery

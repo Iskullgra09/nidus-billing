@@ -149,3 +149,23 @@ class InboundDocumentLink(BaseModel):
 
 class InboundRejectRequest(BaseModel):
     reason: str = Field(min_length=3, max_length=80)
+
+
+class InboundMailboxUpdate(BaseModel):
+    enabled: bool = True
+
+
+class InboundMailboxWebhookAttachment(BaseModel):
+    filename: Optional[str] = Field(default=None, max_length=255)
+    content_base64: Optional[str] = None
+    content: Optional[str] = None
+
+
+class InboundMailboxWebhookPayload(BaseModel):
+
+    to: str = Field(min_length=3, max_length=320)
+    from_address: Optional[str] = Field(default=None, alias="from", max_length=320)
+    subject: Optional[str] = Field(default=None, max_length=500)
+    attachments: list[InboundMailboxWebhookAttachment] = Field(default_factory=list)
+
+    model_config = ConfigDict(populate_by_name=True)

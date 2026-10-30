@@ -243,8 +243,10 @@ class HaciendaInboundService:
         org_id: UUID,
         data: InboundDocumentCreate,
         *,
-        actor_user_id: UUID,
+        actor_user_id: UUID | None,
         ip_address: str | None,
+        ingest_channel: InboundIngestChannel = InboundIngestChannel.MANUAL_UPLOAD,
+        on_clave_exists: str = "error",
     ) -> InboundDocumentResponse:
         try:
             parsed = parse_inbound_factura_xml(data.xml)
@@ -267,6 +269,9 @@ class HaciendaInboundService:
             )
         ).scalar_one_or_none()
         if existing:
+            if on_clave_exists == "return_existing":
+                name = await HaciendaInboundService._supplier_name(session, existing.supplier_id)
+                return HaciendaInboundService._to_response(existing, name)
             raise NidusException(
                 code="INBOUND_CLAVE_EXISTS",
                 message_key="billing.inbound_clave_exists",
@@ -299,7 +304,7 @@ class HaciendaInboundService:
             consecutive=parsed.consecutive,
             document_type=parsed.document_type,
             status=HaciendaFiscalStatus.PENDING.value,
-            ingest_channel=InboundIngestChannel.MANUAL_UPLOAD.value,
+            ingest_channel=ingest_channel.value,
             emitter_identification_type=parsed.emitter_identification_type,
             emitter_identification_number=parsed.emitter_identification_number,
             emitter_name=parsed.emitter_name,
@@ -324,7 +329,7 @@ class HaciendaInboundService:
             actor_user_id=actor_user_id,
             resource_type=AuditResourceType.INBOUND_FISCAL,
             resource_id=row.id,
-            details={"clave": row.clave},
+            details={"clave": row.clave, "ingest_channel": ingest_channel.value},
             ip_address=ip_address,
         )
         await session.refresh(row)

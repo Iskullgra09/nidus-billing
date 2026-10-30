@@ -53,8 +53,8 @@ Phases are **product slices**, not Core’s old Phase 1–16 list. Status update
 | **B6** | Hacienda outbound — **facturas de venta** emit + verify | Done (mock emit; live XAdES gated) |
 | **B6.1** | XAdES signer + sandbox live path; USD rate on FE; CABYS UI mínimo | Done (mock default; live gated) |
 | **B6.2** | Harden FE emit (local XSD, CR clock, MH messages, resumen) | Done (code; sandbox accept still needs real ATV data) |
-| **B7** | **Facturas de compra** — receive FE XML + accept/reject Hacienda | In progress |
-| **B8** | Correo de compras (mailbox → same purchase inbox) | Planned |
+| **B7** | **Facturas de compra** — receive FE XML + accept/reject Hacienda | Done (manual XML + accept/reject mock) |
+| **B8** | Correo de compras (mailbox → same purchase inbox) | Done (per-org address + webhook ingest) |
 | **B9** | Hardening, UX polish, quotes→invoice, domain tests | Planned |
 | **B10** | FX / BCCR rates + multi-currency AR reports | Planned |
 | **B11** | Party enrichment (multi contact / address) | Planned |
@@ -221,9 +221,10 @@ Base billing is **one** product area with **two document rails**, not two unrela
 
 **Goal:** supplier invoices that arrive by email (or are forwarded to a dedicated **per-org** inbox) are parsed and loaded into the same **Facturas de compra** list for triage.
 
-**Backend:** per-org inbound address or IMAP/webhook mailbox; parse attachments (XML preferred; PDF fallback metadata); dedupe by clave; create inbound draft linked to supplier when possible; notify tenant.  
-**Frontend:** mailbox settings (“este es tu correo de facturas de compra”), “imported from email” badge, same accept/reject as B7.  
-**Out of scope:** replacing Hacienda as source of truth — email is an ingest channel; accept/reject still via MensajeReceptor.
+**Backend:** `organization_inbound_mailbox` (unique `local_part` → `{local}@{INBOUND_MAILBOX_DOMAIN}`); GET/PUT `/billing/inbound-mailbox`; provider-agnostic webhook `POST /webhooks/inbound-mailbox` with `X-Nidus-Mailbox-Secret`; XML attachment → same `inbound_fiscal_document` with `ingest_channel=email`; dedupe by clave (idempotent).  
+**Frontend:** mailbox card on **Facturas de compra** (“este es tu correo…” + copy/enable); “From email” badge; same accept/reject as B7.  
+**Config:** `INBOUND_MAILBOX_DOMAIN`, `INBOUND_MAILBOX_WEBHOOK_SECRET`.  
+**Out of scope:** real IMAP poll / Mailgun adapter polish; PDF-only metadata ingest; tenant push notifications; replacing Hacienda as source of truth — email is an ingest channel; accept/reject still via MensajeReceptor.
 
 ### B9 — Hardening, UX polish, domain tests
 

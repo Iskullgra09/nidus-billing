@@ -74,7 +74,10 @@
         "inbound_linked": "Proveedor vinculado al documento entrante.",
         "inbound_accepted": "Aceptación enviada a Hacienda.",
         "inbound_rejected": "Rechazo enviado a Hacienda.",
-        "inbound_verified": "Estado Hacienda del entrante actualizado."
+        "inbound_verified": "Estado Hacienda del entrante actualizado.",
+        "inbound_mailbox_retrieved": "Correo de facturas de compra obtenido.",
+        "inbound_mailbox_updated": "Configuración del correo de compras actualizada.",
+        "inbound_mailbox_ingested": "Adjunto de correo registrado como factura de compra."
     },
     "billing": {
         "customer_tax_id_conflict": "Ya existe un cliente con el tax id '{tax_id}' en esta organización.",
@@ -103,6 +106,12 @@
         "inbound_already_answered": "Este documento ya tiene una aceptación o rechazo enviado.",
         "inbound_reject_reason_required": "Indica el motivo del rechazo antes de enviar a Hacienda.",
         "inbound_not_submitted": "Acepta o rechaza el documento antes de verificar en Hacienda.",
+        "inbound_mailbox_address_invalid": "No se pudo interpretar la dirección de correo de destino.",
+        "inbound_mailbox_webhook_disabled": "El secreto del webhook de correo de compras no está configurado.",
+        "inbound_mailbox_webhook_unauthorized": "Secreto de webhook de correo de compras inválido.",
+        "inbound_mailbox_not_found": "Ninguna organización tiene ese correo de compras.",
+        "inbound_mailbox_disabled": "Este correo de facturas de compra está deshabilitado.",
+        "inbound_mailbox_xml_required": "El correo debe incluir un adjunto XML FE.",
         "invoice_no_lines": "Agrega al menos una línea antes de emitir la factura.",
         "invoice_due_date_required": "La fecha de vencimiento es obligatoria al emitir una factura a crédito.",
         "invoice_has_payments": "No se puede anular mientras la factura tenga pagos registrados.",

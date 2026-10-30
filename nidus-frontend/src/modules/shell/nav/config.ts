@@ -44,7 +44,7 @@ export const SHELL_NAV_GROUPS: ShellNavGroup[] = [
         icon: FileInput,
         scope: NidusScope.INBOUND_READ,
         keywords:
-          "inbound compras purchase facturas compra bandeja hacienda proveedores accept reject",
+          "inbound compras purchase facturas compra bandeja hacienda proveedores accept reject mailbox correo email",
       },
     ],
   },

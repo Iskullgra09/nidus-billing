@@ -58,6 +58,12 @@ def disable_rate_limit_by_default(monkeypatch: MonkeyPatch) -> None:
     monkeypatch.setattr(settings, "RATE_LIMIT_ENABLED", False)
 
 
+@pytest.fixture(autouse=True)
+def mock_smtp_in_tests(monkeypatch: MonkeyPatch) -> None:
+    monkeypatch.setattr(settings, "SMTP_USER", "")
+    monkeypatch.setattr(settings, "SMTP_PASSWORD", "")
+
+
 @pytest.fixture
 async def db_session() -> AsyncGenerator[AsyncSession, None]:
     """
@@ -103,6 +109,8 @@ async def cleanup_and_seed() -> None:
                 "invoice_payment",
                 "invoice_line",
                 "invoice",
+                "inbound_fiscal_document",
+                "organization_inbound_mailbox",
                 "document_series",
                 "item",
                 "customer",

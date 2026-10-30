@@ -8,6 +8,7 @@ from app.api.deps import ScopeGuard, get_current_tenant_session, get_jwt_payload
 from app.core.exceptions.base import AuthenticationError
 from app.core.i18n.service import i18n
 from app.core.rate_limit import RateLimit
+from app.core.request_context import RequestContext
 from app.models.billing.enums import HaciendaEnvironment
 from app.models.identity.scopes import NidusScope
 from app.schemas.filters.billing import InboundFilter, InvoiceFilter, ItemFilter, PartyFilter
@@ -16,6 +17,7 @@ from app.schemas.requests.billing import (
     HaciendaCredentialUpsert,
     InboundDocumentCreate,
     InboundDocumentLink,
+    InboundMailboxUpdate,
     InboundRejectRequest,
     InvoiceCreate,
     InvoicePaymentCreate,
@@ -32,6 +34,7 @@ from app.schemas.responses.billing import (
     FiscalProfileResponse,
     HaciendaCredentialStatusResponse,
     InboundDocumentResponse,
+    InboundMailboxResponse,
     InvoiceEmailDeliveryResponse,
     InvoiceFiscalResponse,
     InvoiceListItem,
@@ -46,6 +49,7 @@ from app.services.billing import (
     FiscalService,
     HaciendaEmitService,
     HaciendaInboundService,
+    InboundMailboxService,
     InvoiceEmailService,
     InvoiceService,
     ItemService,
@@ -662,6 +666,57 @@ def _actor_user_id(payload: dict[str, Any]) -> UUID:
     if not actor_raw:
         raise AuthenticationError()
     return UUID(str(actor_raw))
+
+
+@router.get(
+    "/inbound-mailbox",
+    response_model=GenericResponse[InboundMailboxResponse],
+    dependencies=[Depends(ScopeGuard(NidusScope.INBOUND_READ))],
+)
+async def get_inbound_mailbox(
+    session: AsyncSession = Depends(get_current_tenant_session),
+    payload: dict[str, Any] = Depends(get_jwt_payload),
+    lang: str = Depends(get_language),
+):
+    org_id = _require_org_id(payload)
+    data = await InboundMailboxService.get_or_provision(
+        session,
+        org_id,
+        actor_user_id=_actor_user_id(payload),
+        ip_address=RequestContext.get_client_ip(),
+    )
+    return GenericResponse(
+        data=data,
+        message=i18n.t("success.inbound_mailbox_retrieved", lang=lang),
+    )
+
+
+@router.put(
+    "/inbound-mailbox",
+    response_model=GenericResponse[InboundMailboxResponse],
+    dependencies=[
+        Depends(ScopeGuard(NidusScope.INBOUND_WRITE)),
+        Depends(RateLimit("billing.inbound_mailbox", tier="moderate")),
+    ],
+)
+async def update_inbound_mailbox(
+    body: InboundMailboxUpdate,
+    session: AsyncSession = Depends(get_current_tenant_session),
+    payload: dict[str, Any] = Depends(get_jwt_payload),
+    lang: str = Depends(get_language),
+):
+    org_id = _require_org_id(payload)
+    data = await InboundMailboxService.update(
+        session,
+        org_id,
+        body,
+        actor_user_id=_actor_user_id(payload),
+        ip_address=RequestContext.get_client_ip(),
+    )
+    return GenericResponse(
+        data=data,
+        message=i18n.t("success.inbound_mailbox_updated", lang=lang),
+    )
 
 
 @router.get(

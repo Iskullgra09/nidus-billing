@@ -11,8 +11,46 @@ import {
   InboundDocument,
   InboundLinkPayload,
 } from "../types/inbound";
+import { InboundMailbox } from "../types/mailbox";
 
 const PATH = "/billing/inbound";
+
+export async function getInboundMailboxAction(): Promise<InboundMailbox | null> {
+  try {
+    const session = (await cookies()).get("nidus_session")?.value;
+    if (!session) return null;
+    const response = await fetchClient<InboundMailbox>("/billing/inbound-mailbox", {
+      headers: { Authorization: `Bearer ${session}` },
+    });
+    return response.status === "success" && response.data ? response.data : null;
+  } catch (error) {
+    console.error("Fetch inbound mailbox error:", error);
+    return null;
+  }
+}
+
+export async function updateInboundMailboxAction(
+  enabled: boolean,
+): Promise<ActionResponse> {
+  const tCommon = await getTranslations("Common");
+  try {
+    const session = (await cookies()).get("nidus_session")?.value;
+    if (!session) return { status: "error", message: tCommon("connectionError") };
+    const response = await fetchClient<InboundMailbox>("/billing/inbound-mailbox", {
+      method: "PUT",
+      headers: { Authorization: `Bearer ${session}` },
+      body: JSON.stringify({ enabled }),
+    });
+    if (response.status === "success") {
+      revalidatePath(PATH);
+      return { status: "success", message: response.message };
+    }
+    return { status: "error", message: response.message || tCommon("connectionError") };
+  } catch (error) {
+    console.error("Update inbound mailbox error:", error);
+    return { status: "error", message: tCommon("connectionError") };
+  }
+}
 
 export async function getInboundDocumentsPage(params: {
   q?: string;

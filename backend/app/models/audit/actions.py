@@ -54,6 +54,7 @@ class AuditAction(StrEnum):
     INBOUND_ACCEPT = "inbound_fiscal.accept"
     INBOUND_REJECT = "inbound_fiscal.reject"
     INBOUND_VERIFY = "inbound_fiscal.verify"
+    INBOUND_MAILBOX_UPSERT = "inbound_mailbox.upsert"
 
 
 class AuditResourceType(StrEnum):
@@ -73,3 +74,4 @@ class AuditResourceType(StrEnum):
     HACIENDA_CREDENTIAL = "hacienda_credential"
     INVOICE_FISCAL = "invoice_fiscal"
     INBOUND_FISCAL = "inbound_fiscal_document"
+    INBOUND_MAILBOX = "inbound_mailbox"
