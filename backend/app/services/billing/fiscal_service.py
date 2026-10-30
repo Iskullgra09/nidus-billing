@@ -1,10 +1,12 @@
+import logging
 from typing import Any, Optional, cast
 from uuid import UUID
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.field_encryption import encrypt_bytes, encrypt_text
+from app.core.exceptions.base import NidusException
+from app.core.field_encryption import decrypt_text, encrypt_bytes, encrypt_text
 from app.models.audit import AuditAction, AuditResourceType
 from app.models.billing.enums import HaciendaEnvironment
 from app.models.billing.fiscal_profile import OrganizationFiscalProfile
@@ -15,6 +17,9 @@ from app.schemas.responses.billing import (
     HaciendaCredentialStatusResponse,
 )
 from app.services.audit_service import AuditService
+from app.services.billing.hacienda.signer import load_pkcs12_key_and_cert
+
+logger = logging.getLogger("nidus.hacienda.credentials")
 
 
 class FiscalService:
@@ -153,8 +158,42 @@ class FiscalService:
             row.username = data.username.strip() or None
         if data.oauth_client_id is not None:
             row.oauth_client_id = data.oauth_client_id.strip() or None
+
+        password_for_p12 = (
+            data.p12_password
+            if data.p12_password is not None and data.p12_password != ""
+            else None
+        )
         if p12_bytes:
+            if password_for_p12 is None and row.p12_password_ciphertext is not None:
+                password_for_p12 = decrypt_text(row.p12_password_ciphertext)
+            if password_for_p12 is None:
+                raise NidusException(
+                    code="HACIENDA_P12_PASSWORD_REQUIRED",
+                    message_key="billing.hacienda_p12_password_required",
+                    status_code=400,
+                )
+            try:
+                load_pkcs12_key_and_cert(p12_bytes, password_for_p12)
+            except ValueError as exc:
+                logger.warning(
+                    "hacienda_p12_reject org=%s size=%s error=%s",
+                    organization_id,
+                    len(p12_bytes),
+                    str(exc)[:200],
+                )
+                raise NidusException(
+                    code="HACIENDA_P12_INVALID",
+                    message_key="billing.hacienda_p12_invalid",
+                    status_code=400,
+                    error=str(exc)[:200],
+                ) from exc
             row.p12_ciphertext = encrypt_bytes(p12_bytes)
+            logger.info(
+                "hacienda_p12_accepted org=%s size=%s",
+                organization_id,
+                len(p12_bytes),
+            )
         if data.p12_password is not None and data.p12_password != "":
             row.p12_password_ciphertext = encrypt_text(data.p12_password)
         if data.pin is not None and data.pin != "":
@@ -173,6 +212,7 @@ class FiscalService:
                 "environment": row.environment,
                 "has_p12": row.p12_ciphertext is not None,
                 "has_username": bool(row.username),
+                "p12_bytes": len(p12_bytes) if p12_bytes else 0,
             },
         )
         await session.refresh(row)

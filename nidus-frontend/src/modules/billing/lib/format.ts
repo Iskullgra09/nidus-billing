@@ -1,4 +1,4 @@
-/** Display helpers for billing money / tax rates (API may store more precision). */
+/** Billing display helpers (API may store more precision than UI shows). */
 
 function toNumber(value: string | number | null | undefined): number | null {
   if (value == null || value === "") return null;
@@ -6,7 +6,7 @@ function toNumber(value: string | number | null | undefined): number | null {
   return Number.isFinite(n) ? n : null;
 }
 
-/** Money for tables/PDF-like UI: always 2 fraction digits. */
+/** Always 2 decimal places (es-CR). */
 export function formatMoney(
   value: string | number | null | undefined,
   options?: { currency?: string; withCurrency?: boolean },
@@ -23,14 +23,13 @@ export function formatMoney(
   return amount;
 }
 
-/** Compact money string for form inputs (no grouping). */
 export function formatMoneyInput(value: string | number | null | undefined): string {
   const n = toNumber(value);
   if (n == null) return "0.00";
   return n.toFixed(2);
 }
 
-/** Tax rate for tables: trim trailing zeros, append %. */
+/** Trim trailing zeros before %. */
 export function formatPercent(value: string | number | null | undefined): string {
   const n = toNumber(value);
   if (n == null) return "—";
@@ -38,7 +37,6 @@ export function formatPercent(value: string | number | null | undefined): string
   return `${fixed}%`;
 }
 
-/** Tax rate for form inputs. */
 export function formatPercentInput(value: string | number | null | undefined): string {
   const n = toNumber(value);
   if (n == null) return "";

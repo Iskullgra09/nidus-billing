@@ -123,6 +123,7 @@ class InvoiceListItem(BaseModel):
     balance_due: Decimal
     is_overdue: bool = False
     hacienda_status: Optional[str] = None
+    hacienda_message: Optional[str] = None
     created_at: datetime
     updated_at: datetime
 

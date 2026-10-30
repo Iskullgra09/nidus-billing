@@ -25,7 +25,7 @@ export interface LoginOrgSelectionPayload {
   organizations: UserOrganizationSummary[];
 }
 
-/** @deprecated Prefer ActionResponse from @/core/types/api */
+/** @deprecated Use ActionResponse from @/core/types/api */
 export type AuthActionResponse = ActionResponse;
 
 export interface OrgSelectionActionResponse {

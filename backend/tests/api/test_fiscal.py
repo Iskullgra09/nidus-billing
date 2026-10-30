@@ -1,7 +1,37 @@
+from datetime import datetime, timezone
 from typing import Any, Dict, Tuple
 
 import pytest
+from cryptography import x509
+from cryptography.hazmat.primitives import hashes, serialization
+from cryptography.hazmat.primitives.asymmetric import rsa
+from cryptography.hazmat.primitives.serialization import pkcs12
+from cryptography.x509.oid import NameOID
 from httpx import AsyncClient
+
+
+def _test_p12(password: bytes = b"secret-pass") -> bytes:
+    key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
+    subject = issuer = x509.Name(
+        [x509.NameAttribute(NameOID.COMMON_NAME, "Nidus Test Signer")]
+    )
+    cert = (
+        x509.CertificateBuilder()
+        .subject_name(subject)
+        .issuer_name(issuer)
+        .public_key(key.public_key())
+        .serial_number(x509.random_serial_number())
+        .not_valid_before(datetime(2026, 1, 1, tzinfo=timezone.utc))
+        .not_valid_after(datetime(2027, 1, 1, tzinfo=timezone.utc))
+        .sign(key, hashes.SHA256())
+    )
+    return pkcs12.serialize_key_and_certificates(
+        name=b"nidus-test",
+        key=key,
+        cert=cert,
+        cas=None,
+        encryption_algorithm=serialization.BestAvailableEncryption(password),
+    )
 
 
 @pytest.mark.asyncio
@@ -16,9 +46,9 @@ async def test_fiscal_profile_upsert_and_get(
         "identification_number": "3101123456",
         "economic_activity_code": "620100",
         "branch_code": "001",
-        "province": "San José",
-        "canton": "Central",
-        "district": "Carmen",
+        "province": "1",
+        "canton": "01",
+        "district": "01",
         "country_code": "CR",
     }
     put_res = await client.put("/api/v1/billing/fiscal-profile", json=payload)
@@ -37,12 +67,19 @@ async def test_hacienda_credentials_status_without_secrets(
     auth_client: Tuple[AsyncClient, Dict[str, Any]],
 ) -> None:
     client, _ = auth_client
+    password = "secret-pass"
     form = {
         "environment": "sandbox",
         "username": "mh-user@example.com",
-        "p12_password": "secret-pass",
+        "p12_password": password,
     }
-    files = {"p12_file": ("cert.p12", b"fake-p12-bytes", "application/x-pkcs12")}
+    files = {
+        "p12_file": (
+            "cert.p12",
+            _test_p12(password.encode("utf-8")),
+            "application/x-pkcs12",
+        )
+    }
     put_res = await client.put(
         "/api/v1/billing/hacienda-credentials",
         data=form,

@@ -41,6 +41,7 @@ import {
   InvoiceFiscal,
   InvoiceListItem,
 } from "../types/invoice";
+import { HaciendaStatusBadge } from "./hacienda-status-badge";
 import { InvoiceDetailDialog } from "./invoice-detail-dialog";
 import { InvoiceFormDialog } from "./invoice-form-dialog";
 import {
@@ -138,12 +139,6 @@ export function InvoicesTable({
     haciendaStatus === "rejected" ||
     haciendaStatus === "error" ||
     haciendaStatus === "pending";
-
-  const haciendaBadgeVariant = (status: string) => {
-    if (status === "rejected" || status === "error") return "destructive";
-    if (status === "accepted") return "default";
-    return "secondary";
-  };
 
   const handleEmitHacienda = async (row: InvoiceListItem) => {
     const result = await emitInvoiceFiscalAction(row.id);
@@ -255,9 +250,10 @@ export function InvoicesTable({
         <div className="flex flex-wrap justify-center gap-1">
           <Badge variant={statusVariant(row.status)}>{t(`status.${row.status}`)}</Badge>
           {row.hacienda_status && (
-            <Badge variant={haciendaBadgeVariant(row.hacienda_status)}>
-              {t(`haciendaStatus.${row.hacienda_status}`)}
-            </Badge>
+            <HaciendaStatusBadge
+              status={row.hacienda_status}
+              message={row.hacienda_message}
+            />
           )}
           {row.is_overdue && <Badge variant="destructive">{t("overdueBadge")}</Badge>}
         </div>

@@ -21,7 +21,6 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl=f"{settings.API_V1_STR}/auth/login
 
 
 async def get_jwt_payload(token: Annotated[str, Depends(oauth2_scheme)]) -> dict[str, Any]:
-    """Extracts and validates the JWT payload with strict dictionary typing."""
     try:
         payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
         if not payload.get("sub") or not payload.get("org_id"):
@@ -39,10 +38,7 @@ async def get_current_tenant_session(
     payload: Annotated[dict[str, Any], Depends(get_jwt_payload)],
     session: Annotated[AsyncSession, Depends(get_session)],
 ) -> AsyncSession:
-    """
-    Injects the JWT context into PostgreSQL RLS.
-    Returns the database session tightly scoped to the current tenant.
-    """
+    """Set RLS from JWT, then return the tenant-scoped session."""
     user_id = payload.get("sub")
     org_id = payload.get("org_id")
 
@@ -61,11 +57,7 @@ async def get_current_org_id(
 
 
 class ScopeGuard:
-    """
-    Evaluates hierarchical JSONB scopes.
-    Fast path: JWT embedded scopes (issued at login/switch-org).
-    Fallback: DB role lookup for legacy tokens missing scopes.
-    """
+    """Require a scope; JWT scopes first, else DB role lookup for legacy tokens."""
 
     def __init__(self, required_scope: str):
         self.required_scope = required_scope

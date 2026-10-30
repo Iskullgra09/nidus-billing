@@ -102,6 +102,7 @@ export interface InvoiceListItem {
   balance_due: string;
   is_overdue: boolean;
   hacienda_status?: HaciendaStatus | "processing" | null;
+  hacienda_message?: string | null;
   created_at: string;
   updated_at: string;
 }

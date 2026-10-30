@@ -9,6 +9,7 @@ import { Badge } from "@/shared/ui/badge";
 import { Button } from "@/shared/ui/button";
 import { formatMoney, formatPercent } from "../lib/format";
 import { Invoice, InvoiceEmailDelivery, InvoiceFiscal } from "../types/invoice";
+import { HaciendaStatusBadge } from "./hacienda-status-badge";
 
 interface InvoiceDetailDialogProps {
   isOpen: boolean;
@@ -71,17 +72,10 @@ export function InvoiceDetailDialog({
                   {t(`status.${invoice.status}`)}
                 </Badge>
                 {fiscalStatus && (
-                  <Badge
-                    variant={
-                      fiscalStatus === "rejected" || fiscalStatus === "error"
-                        ? "destructive"
-                        : fiscalStatus === "accepted"
-                          ? "default"
-                          : "secondary"
-                    }
-                  >
-                    {t(`haciendaStatus.${fiscalStatus}`)}
-                  </Badge>
+                  <HaciendaStatusBadge
+                    status={fiscalStatus}
+                    message={fiscal?.mh_message}
+                  />
                 )}
                 {invoice.is_overdue && (
                   <Badge variant="destructive">{t("overdueBadge")}</Badge>
@@ -294,7 +288,9 @@ export function InvoiceDetailDialog({
                 {fiscal.mh_message && (
                   <div className="sm:col-span-2">
                     <dt className="text-muted-foreground">{t("haciendaMessage")}</dt>
-                    <dd className="text-muted-foreground">{fiscal.mh_message}</dd>
+                    <dd className="mt-1 whitespace-pre-wrap text-muted-foreground">
+                      {fiscal.mh_message}
+                    </dd>
                   </div>
                 )}
                 {fiscal.mock_mode && (

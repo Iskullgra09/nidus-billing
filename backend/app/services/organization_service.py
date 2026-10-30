@@ -159,10 +159,7 @@ class OrganizationService:
 
     @staticmethod
     async def delete_organization(session: AsyncSession, org_id: UUID) -> None:
-        """
-        Applies a cascading soft-delete to the organization and all its dependencies.
-        Ensures no orphaned records remain active.
-        """
+        """Soft-delete org and dependent rows."""
         OrgModel = cast(Any, Organization)
 
         stmt = select(Organization).where(OrgModel.id == org_id, OrgModel.deleted_at.is_(None))

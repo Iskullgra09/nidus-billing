@@ -1,9 +1,11 @@
 from __future__ import annotations
 
-from datetime import datetime, timezone
+import logging
+from datetime import datetime, timedelta, timezone
 from decimal import Decimal
 from typing import Any, Optional, cast
 from uuid import UUID
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -35,7 +37,12 @@ from app.services.billing.hacienda import (
     build_clave,
     build_consecutive,
     build_factura_electronica_xml,
+    humanize_mh_message,
     sign_factura_xml,
+)
+from app.services.billing.hacienda.validate_fe import (
+    FeXmlSchemaError,
+    validate_factura_electronica_xml,
 )
 from app.services.billing.hacienda.xml_fe import (
     FacturaElectronicaInput,
@@ -43,11 +50,23 @@ from app.services.billing.hacienda.xml_fe import (
     XmlParty,
 )
 
+logger = logging.getLogger(__name__)
+try:
+    _CR_TZ = ZoneInfo("America/Costa_Rica")
+except ZoneInfoNotFoundError:
+    _CR_TZ = timezone(timedelta(hours=-6))
+
 
 class HaciendaEmitService:
     @staticmethod
     def _fiscal_response(row: InvoiceFiscal) -> InvoiceFiscalResponse:
-        return InvoiceFiscalResponse.model_validate(row)
+        data = InvoiceFiscalResponse.model_validate(row)
+        human = humanize_mh_message(data.mh_message) or humanize_mh_message(
+            getattr(row, "mh_response_xml", None)
+        )
+        if human != data.mh_message:
+            return data.model_copy(update={"mh_message": human})
+        return data
 
     @staticmethod
     async def get_for_invoice(
@@ -189,9 +208,8 @@ class HaciendaEmitService:
             )
         ).scalar_one_or_none()
 
-        issued_at = invoice.issued_at or datetime.now(timezone.utc)
-        if issued_at.tzinfo is None:
-            issued_at = issued_at.replace(tzinfo=timezone.utc)
+        # Clave + FechaEmision must track official CR clock at submit time.
+        issued_at = datetime.now(_CR_TZ)
 
         sequence = await HaciendaEmitService._allocate_fe_sequence(session, org_id)
         consecutive = build_consecutive(
@@ -287,6 +305,19 @@ class HaciendaEmitService:
             payment_condition=invoice.payment_condition,
         )
         xml_unsigned = build_factura_electronica_xml(xml_input)
+        try:
+            validate_factura_electronica_xml(
+                xml_unsigned, allow_missing_signature=True
+            )
+        except FeXmlSchemaError as exc:
+            detail = "; ".join(exc.errors)[:400]
+            logger.warning("hacienda_fe_xsd_invalid_unsigned errors=%s", detail)
+            raise NidusException(
+                code="HACIENDA_XML_SCHEMA_INVALID",
+                message_key="billing.hacienda_xml_schema_invalid",
+                status_code=400,
+                error=detail,
+            ) from exc
 
         p12_bytes = None
         p12_password = None
@@ -296,6 +327,8 @@ class HaciendaEmitService:
             p12_password = decrypt_text(credential.p12_password_ciphertext)
         if credential and credential.pin_ciphertext:
             api_password = decrypt_text(credential.pin_ciphertext)
+        if p12_bytes and not p12_password and api_password:
+            p12_password = api_password
 
         live = bool(settings.HACIENDA_LIVE)
         if live and (not p12_bytes or p12_password is None):
@@ -312,6 +345,12 @@ class HaciendaEmitService:
                 p12_password=p12_password,
             )
         except Exception as exc:
+            logger.warning(
+                "hacienda_sign_failed live=%s p12_size=%s error=%s",
+                live,
+                len(p12_bytes) if p12_bytes else 0,
+                str(exc)[:300],
+            )
             if live:
                 raise NidusException(
                     code="HACIENDA_SIGN_FAILED",
@@ -331,6 +370,19 @@ class HaciendaEmitService:
                 message_key="billing.hacienda_sign_required",
                 status_code=400,
             )
+
+        if not sign_result.mock:
+            try:
+                validate_factura_electronica_xml(sign_result.xml_signed)
+            except FeXmlSchemaError as exc:
+                detail = "; ".join(exc.errors)[:400]
+                logger.warning("hacienda_fe_xsd_invalid_signed errors=%s", detail)
+                raise NidusException(
+                    code="HACIENDA_XML_SCHEMA_INVALID",
+                    message_key="billing.hacienda_xml_schema_invalid",
+                    status_code=400,
+                    error=detail,
+                ) from exc
 
         client = HaciendaClient(
             environment=HaciendaEnvironment(
@@ -353,15 +405,24 @@ class HaciendaEmitService:
             and bool(credential and credential.username and api_password),
         )
 
-        submit = await client.submit(
-            clave=clave,
-            issued_at=issued_at,
-            emitter_type=xml_input.emitter.identification_type_code,
-            emitter_number=xml_input.emitter.identification_number,
-            receptor_type=xml_input.receptor.identification_type_code,
-            receptor_number=xml_input.receptor.identification_number,
-            xml_signed=sign_result.xml_signed,
-        )
+        try:
+            submit = await client.submit(
+                clave=clave,
+                issued_at=issued_at,
+                emitter_type=xml_input.emitter.identification_type_code,
+                emitter_number=xml_input.emitter.identification_number,
+                receptor_type=xml_input.receptor.identification_type_code,
+                receptor_number=xml_input.receptor.identification_number,
+                xml_signed=sign_result.xml_signed,
+            )
+        except Exception as exc:
+            logger.warning("hacienda_submit_failed error=%s", str(exc)[:300])
+            raise NidusException(
+                code="HACIENDA_SUBMIT_FAILED",
+                message_key="billing.hacienda_submit_failed",
+                status_code=400,
+                error=str(exc)[:300],
+            ) from exc
 
         now = datetime.now(timezone.utc)
         row = existing or InvoiceFiscal(

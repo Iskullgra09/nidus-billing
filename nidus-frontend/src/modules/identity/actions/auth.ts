@@ -1,7 +1,4 @@
-/**
- * Barrel for identity auth actions.
- * Prefer importing from session / login / onboarding / password in new code.
- */
+/** Re-exports identity auth actions (session, login, onboarding, password). */
 export {
   setSessionCookie,
   getCurrentUser,
