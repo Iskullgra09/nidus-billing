@@ -122,6 +122,9 @@ export function InboundDocumentsTable({
       cell: (row) => (
         <div className="flex flex-wrap gap-1">
           <Badge variant="secondary">{t(`status.${row.status}`)}</Badge>
+          {row.ingest_channel === "email" && (
+            <Badge variant="outline">{t("fromEmail")}</Badge>
+          )}
           {row.mock_mode && <Badge variant="outline">{t("haciendaMock")}</Badge>}
         </div>
       ),

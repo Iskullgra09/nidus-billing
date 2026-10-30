@@ -3,6 +3,7 @@ from app.models.billing.document_series import DocumentSeries
 from app.models.billing.fiscal_profile import OrganizationFiscalProfile
 from app.models.billing.hacienda_credential import OrganizationHaciendaCredential
 from app.models.billing.inbound_document import InboundFiscalDocument
+from app.models.billing.inbound_mailbox import OrganizationInboundMailbox
 from app.models.billing.invoice import Invoice, InvoiceLine
 from app.models.billing.invoice_email import InvoiceEmailDelivery
 from app.models.billing.invoice_fiscal import InvoiceFiscal
@@ -22,5 +23,6 @@ __all__ = [
     "Item",
     "OrganizationFiscalProfile",
     "OrganizationHaciendaCredential",
+    "OrganizationInboundMailbox",
     "Supplier",
 ]

@@ -74,7 +74,10 @@
         "inbound_linked": "Inbound document supplier link updated.",
         "inbound_accepted": "Acceptance submitted to Hacienda.",
         "inbound_rejected": "Rejection submitted to Hacienda.",
-        "inbound_verified": "Inbound Hacienda status refreshed."
+        "inbound_verified": "Inbound Hacienda status refreshed.",
+        "inbound_mailbox_retrieved": "Purchase mailbox address retrieved.",
+        "inbound_mailbox_updated": "Purchase mailbox settings updated.",
+        "inbound_mailbox_ingested": "Email attachment registered as a purchase invoice."
     },
     "billing": {
         "customer_tax_id_conflict": "A customer with tax id '{tax_id}' already exists in this organization.",
@@ -103,6 +106,12 @@
         "inbound_already_answered": "This inbound document already has an accept/reject submission.",
         "inbound_reject_reason_required": "Provide a rejection reason before rejecting at Hacienda.",
         "inbound_not_submitted": "Accept or reject the document before verifying Hacienda status.",
+        "inbound_mailbox_address_invalid": "Could not parse the destination mailbox address.",
+        "inbound_mailbox_webhook_disabled": "Inbound mailbox webhook secret is not configured.",
+        "inbound_mailbox_webhook_unauthorized": "Invalid inbound mailbox webhook secret.",
+        "inbound_mailbox_not_found": "No organization mailbox matches that address.",
+        "inbound_mailbox_disabled": "This purchase mailbox is disabled.",
+        "inbound_mailbox_xml_required": "Email must include an FE XML attachment.",
         "invoice_no_lines": "Add at least one line before issuing the invoice.",
         "invoice_due_date_required": "A due date is required when issuing a credit (crédito) invoice.",
         "invoice_has_payments": "Void is blocked while the invoice has recorded payments.",

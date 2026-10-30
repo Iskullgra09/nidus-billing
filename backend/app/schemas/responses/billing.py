@@ -235,3 +235,15 @@ class InboundDocumentResponse(BaseModel):
 
     model_config = ConfigDict(from_attributes=True)
 
+
+class InboundMailboxResponse(BaseModel):
+    organization_id: UUID
+    local_part: str
+    domain: str
+    address: str
+    enabled: bool
+    created_at: datetime
+    updated_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
+

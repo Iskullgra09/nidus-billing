@@ -62,6 +62,9 @@ class Settings(BaseSettings):
     )
     HACIENDA_XADES_POLICY_DIGEST: str = "DWxin1xWOeI8OuWQXazh4VjLWAaCLAA954em7DMh0h8="
 
+    INBOUND_MAILBOX_DOMAIN: str = "compras.nidus.local"
+    INBOUND_MAILBOX_WEBHOOK_SECRET: str = ""
+
     @computed_field
     @property
     def DATABASE_URL(self) -> str:
