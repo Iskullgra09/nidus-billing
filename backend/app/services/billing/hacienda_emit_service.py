@@ -371,17 +371,18 @@ class HaciendaEmitService:
                 status_code=400,
             )
 
-        try:
-            validate_factura_electronica_xml(sign_result.xml_signed)
-        except FeXmlSchemaError as exc:
-            detail = "; ".join(exc.errors)[:400]
-            logger.warning("hacienda_fe_xsd_invalid_signed errors=%s", detail)
-            raise NidusException(
-                code="HACIENDA_XML_SCHEMA_INVALID",
-                message_key="billing.hacienda_xml_schema_invalid",
-                status_code=400,
-                error=detail,
-            ) from exc
+        if not sign_result.mock:
+            try:
+                validate_factura_electronica_xml(sign_result.xml_signed)
+            except FeXmlSchemaError as exc:
+                detail = "; ".join(exc.errors)[:400]
+                logger.warning("hacienda_fe_xsd_invalid_signed errors=%s", detail)
+                raise NidusException(
+                    code="HACIENDA_XML_SCHEMA_INVALID",
+                    message_key="billing.hacienda_xml_schema_invalid",
+                    status_code=400,
+                    error=detail,
+                ) from exc
 
         client = HaciendaClient(
             environment=HaciendaEnvironment(
