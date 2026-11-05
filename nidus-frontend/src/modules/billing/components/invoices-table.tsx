@@ -102,6 +102,16 @@ export function InvoicesTable({
     router.replace(qs ? `${pathname}?${qs}` : pathname);
   };
 
+  React.useEffect(() => {
+    if (searchParams.get("create") !== "1") return;
+    setSelected(null);
+    setDialogOpen(true);
+    replaceQuery((params) => {
+      params.delete("create");
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- open once when create=1 lands
+  }, [searchParams]);
+
   const loadInvoice = async (row: InvoiceListItem) => {
     const full = await getInvoiceAction(row.id);
     if (!full) {
@@ -290,7 +300,9 @@ export function InvoicesTable({
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => void openView(row)}>
+              <DropdownMenuItem
+                onClick={() => router.push(`/billing/invoices/${row.id}`)}
+              >
                 <Eye className="size-4" />
                 {t("viewAction")}
               </DropdownMenuItem>

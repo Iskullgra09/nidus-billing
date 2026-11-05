@@ -136,3 +136,80 @@ async def test_mailbox_provision_and_email_ingest(
     )
     assert again.status_code == 200, again.text
     assert again.json()["data"]["clave"] == clave
+
+
+@pytest.mark.asyncio
+async def test_mailbox_webhook_rejects_disabled_and_missing_xml(
+    auth_client: Tuple[AsyncClient, Dict[str, Any]],
+    monkeypatch: MonkeyPatch,
+) -> None:
+    client, _ = auth_client
+    monkeypatch.setattr(settings, "INBOUND_MAILBOX_DOMAIN", "compras.test.local")
+    monkeypatch.setattr(settings, "INBOUND_MAILBOX_WEBHOOK_SECRET", "test-mailbox-secret")
+
+    mailbox = await client.get("/api/v1/billing/inbound-mailbox")
+    assert mailbox.status_code == 200, mailbox.text
+    address = mailbox.json()["data"]["address"]
+
+    await client.put("/api/v1/billing/inbound-mailbox", json={"enabled": False})
+
+    disabled = await client.post(
+        "/api/v1/webhooks/inbound-mailbox",
+        headers={"X-Nidus-Mailbox-Secret": "test-mailbox-secret"},
+        json={
+            "to": address,
+            "from": "supplier@example.com",
+            "subject": "FE",
+            "attachments": [
+                {
+                    "filename": "fe.xml",
+                    "content": _sample_supplier_xml(clave="1" * 50),
+                }
+            ],
+        },
+    )
+    assert disabled.status_code == 400
+    assert disabled.json()["code"] == "INBOUND_MAILBOX_DISABLED"
+
+    await client.put("/api/v1/billing/inbound-mailbox", json={"enabled": True})
+
+    missing_xml = await client.post(
+        "/api/v1/webhooks/inbound-mailbox",
+        headers={"X-Nidus-Mailbox-Secret": "test-mailbox-secret"},
+        json={
+            "to": address,
+            "from": "supplier@example.com",
+            "subject": "FE",
+            "attachments": [{"filename": "nota.pdf", "content": "not-xml"}],
+        },
+    )
+    assert missing_xml.status_code == 400
+    assert missing_xml.json()["code"] == "INBOUND_MAILBOX_XML_REQUIRED"
+
+
+@pytest.mark.asyncio
+async def test_mailbox_webhook_wrong_secret(
+    auth_client: Tuple[AsyncClient, Dict[str, Any]],
+    monkeypatch: MonkeyPatch,
+) -> None:
+    client, _ = auth_client
+    monkeypatch.setattr(settings, "INBOUND_MAILBOX_DOMAIN", "compras.test.local")
+    monkeypatch.setattr(settings, "INBOUND_MAILBOX_WEBHOOK_SECRET", "test-mailbox-secret")
+
+    mailbox = await client.get("/api/v1/billing/inbound-mailbox")
+    address = mailbox.json()["data"]["address"]
+
+    bad = await client.post(
+        "/api/v1/webhooks/inbound-mailbox",
+        headers={"X-Nidus-Mailbox-Secret": "wrong-secret"},
+        json={
+            "to": address,
+            "from": "supplier@example.com",
+            "subject": "FE",
+            "attachments": [
+                {"filename": "fe.xml", "content": _sample_supplier_xml(clave="2" * 50)}
+            ],
+        },
+    )
+    assert bad.status_code == 401
+    assert bad.json()["code"] == "INBOUND_MAILBOX_WEBHOOK_UNAUTHORIZED"

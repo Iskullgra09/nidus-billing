@@ -109,6 +109,8 @@ async def cleanup_and_seed() -> None:
                 "invoice_payment",
                 "invoice_line",
                 "invoice",
+                "quote_line",
+                "quote",
                 "inbound_fiscal_document",
                 "organization_inbound_mailbox",
                 "document_series",

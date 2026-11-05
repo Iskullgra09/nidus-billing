@@ -4,6 +4,7 @@ import {
   FileInput,
   FileText,
   LayoutDashboard,
+  ClipboardList,
   Package,
   ScrollText,
   Settings,
@@ -37,6 +38,14 @@ export const SHELL_NAV_GROUPS: ShellNavGroup[] = [
         scope: NidusScope.INVOICE_READ,
         keywords:
           "invoices facturas venta sales billing contado credito pdf emitir",
+      },
+      {
+        id: "quotes",
+        href: "/billing/quotes",
+        icon: ClipboardList,
+        scope: NidusScope.INVOICE_READ,
+        keywords:
+          "quotes cotizaciones quote estimate presupuesto convert factura",
       },
       {
         id: "inbound",

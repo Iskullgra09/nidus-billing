@@ -11,7 +11,13 @@ from app.core.rate_limit import RateLimit
 from app.core.request_context import RequestContext
 from app.models.billing.enums import HaciendaEnvironment
 from app.models.identity.scopes import NidusScope
-from app.schemas.filters.billing import InboundFilter, InvoiceFilter, ItemFilter, PartyFilter
+from app.schemas.filters.billing import (
+    InboundFilter,
+    InvoiceFilter,
+    ItemFilter,
+    PartyFilter,
+    QuoteFilter,
+)
 from app.schemas.requests.billing import (
     FiscalProfileUpsert,
     HaciendaCredentialUpsert,
@@ -27,10 +33,13 @@ from app.schemas.requests.billing import (
     ItemUpdate,
     PartyCreate,
     PartyUpdate,
+    QuoteCreate,
+    QuoteUpdate,
 )
 from app.schemas.requests.pagination import CursorParams
 from app.schemas.responses.base import GenericResponse
 from app.schemas.responses.billing import (
+    DashboardSummaryResponse,
     FiscalProfileResponse,
     HaciendaCredentialStatusResponse,
     InboundDocumentResponse,
@@ -42,10 +51,13 @@ from app.schemas.responses.billing import (
     InvoiceResponse,
     ItemResponse,
     PartyResponse,
+    QuoteListItem,
+    QuoteResponse,
 )
 from app.schemas.responses.pagination import CursorPage
 from app.services.billing import (
     CustomerService,
+    DashboardService,
     FiscalService,
     HaciendaEmitService,
     HaciendaInboundService,
@@ -54,6 +66,7 @@ from app.services.billing import (
     InvoiceService,
     ItemService,
     PaymentService,
+    QuoteService,
     SupplierService,
 )
 
@@ -293,6 +306,131 @@ async def delete_item(
 
 
 @router.get(
+    "/dashboard-summary",
+    response_model=GenericResponse[DashboardSummaryResponse],
+    dependencies=[Depends(ScopeGuard(NidusScope.INVOICE_READ))],
+)
+async def get_dashboard_summary(
+    session: AsyncSession = Depends(get_current_tenant_session),
+    lang: str = Depends(get_language),
+):
+    data = await DashboardService.get_summary(session)
+    return GenericResponse(
+        data=data,
+        message=i18n.t("success.dashboard_summary_retrieved", lang=lang),
+    )
+
+
+@router.get(
+    "/quotes",
+    response_model=GenericResponse[CursorPage[QuoteListItem]],
+    dependencies=[Depends(ScopeGuard(NidusScope.INVOICE_READ))],
+)
+async def list_quotes(
+    pagination: CursorParams = Depends(),
+    filters: QuoteFilter = Depends(),
+    session: AsyncSession = Depends(get_current_tenant_session),
+    lang: str = Depends(get_language),
+):
+    data = await QuoteService.list_quotes(session, pagination, filters)
+    return GenericResponse(data=data, message=i18n.t("success.quotes_retrieved", lang=lang))
+
+
+@router.post(
+    "/quotes",
+    response_model=GenericResponse[QuoteResponse],
+    status_code=status.HTTP_201_CREATED,
+    dependencies=[Depends(ScopeGuard(NidusScope.INVOICE_WRITE))],
+)
+async def create_quote(
+    data: QuoteCreate,
+    session: AsyncSession = Depends(get_current_tenant_session),
+    payload: dict[str, Any] = Depends(get_jwt_payload),
+    lang: str = Depends(get_language),
+):
+    org_id = _require_org_id(payload)
+    quote = await QuoteService.create_quote(session, org_id, data)
+    return GenericResponse(data=quote, message=i18n.t("success.quote_created", lang=lang))
+
+
+@router.get(
+    "/quotes/{quote_id}",
+    response_model=GenericResponse[QuoteResponse],
+    dependencies=[Depends(ScopeGuard(NidusScope.INVOICE_READ))],
+)
+async def get_quote(
+    quote_id: UUID,
+    session: AsyncSession = Depends(get_current_tenant_session),
+    lang: str = Depends(get_language),
+):
+    quote = await QuoteService.get_quote(session, quote_id)
+    return GenericResponse(data=quote, message=i18n.t("success.quote_retrieved", lang=lang))
+
+
+@router.patch(
+    "/quotes/{quote_id}",
+    response_model=GenericResponse[QuoteResponse],
+    dependencies=[Depends(ScopeGuard(NidusScope.INVOICE_WRITE))],
+)
+async def update_quote(
+    quote_id: UUID,
+    data: QuoteUpdate,
+    session: AsyncSession = Depends(get_current_tenant_session),
+    lang: str = Depends(get_language),
+):
+    quote = await QuoteService.update_quote(session, quote_id, data)
+    return GenericResponse(data=quote, message=i18n.t("success.quote_updated", lang=lang))
+
+
+@router.delete(
+    "/quotes/{quote_id}",
+    response_model=GenericResponse[None],
+    dependencies=[Depends(ScopeGuard(NidusScope.INVOICE_WRITE))],
+)
+async def delete_quote(
+    quote_id: UUID,
+    session: AsyncSession = Depends(get_current_tenant_session),
+    lang: str = Depends(get_language),
+):
+    await QuoteService.delete_quote(session, quote_id)
+    return GenericResponse(message=i18n.t("success.quote_deleted", lang=lang))
+
+
+@router.post(
+    "/quotes/{quote_id}/mark-sent",
+    response_model=GenericResponse[QuoteResponse],
+    dependencies=[Depends(ScopeGuard(NidusScope.INVOICE_WRITE))],
+)
+async def mark_quote_sent(
+    quote_id: UUID,
+    session: AsyncSession = Depends(get_current_tenant_session),
+    lang: str = Depends(get_language),
+):
+    quote = await QuoteService.mark_sent(session, quote_id)
+    return GenericResponse(data=quote, message=i18n.t("success.quote_sent", lang=lang))
+
+
+@router.post(
+    "/quotes/{quote_id}/convert",
+    response_model=GenericResponse[InvoiceResponse],
+    dependencies=[
+        Depends(ScopeGuard(NidusScope.INVOICE_WRITE)),
+        Depends(RateLimit("billing.quote_convert", tier="strict")),
+    ],
+)
+async def convert_quote_to_invoice(
+    quote_id: UUID,
+    session: AsyncSession = Depends(get_current_tenant_session),
+    lang: str = Depends(get_language),
+):
+    invoice = await QuoteService.convert_to_invoice(session, quote_id)
+    return GenericResponse(
+        data=invoice,
+        message=i18n.t("success.quote_converted", lang=lang),
+    )
+
+
+@router.get(
     "/invoices",
     response_model=GenericResponse[CursorPage[InvoiceListItem]],
     dependencies=[Depends(ScopeGuard(NidusScope.INVOICE_READ))],
@@ -529,7 +667,10 @@ async def list_invoice_emails(
     "/invoices/{invoice_id}/send-email",
     response_model=GenericResponse[InvoiceEmailDeliveryResponse],
     status_code=status.HTTP_201_CREATED,
-    dependencies=[Depends(ScopeGuard(NidusScope.INVOICE_WRITE))],
+    dependencies=[
+        Depends(ScopeGuard(NidusScope.INVOICE_WRITE)),
+        Depends(RateLimit("billing.invoice_send_email", tier="strict")),
+    ],
 )
 async def send_invoice_email(
     invoice_id: UUID,
@@ -646,7 +787,10 @@ async def upsert_hacienda_credentials(
 @router.delete(
     "/hacienda-credentials",
     response_model=GenericResponse[HaciendaCredentialStatusResponse],
-    dependencies=[Depends(ScopeGuard(NidusScope.FISCAL_WRITE))],
+    dependencies=[
+        Depends(ScopeGuard(NidusScope.FISCAL_WRITE)),
+        Depends(RateLimit("billing.hacienda_credentials", tier="strict")),
+    ],
 )
 async def delete_hacienda_credentials(
     session: AsyncSession = Depends(get_current_tenant_session),

@@ -2,13 +2,14 @@
 
 import * as React from "react";
 import { useTranslations } from "next-intl";
-import { KeyRound, LogOut, Search } from "lucide-react";
+import { ClipboardList, FileText, KeyRound, LogOut, Search } from "lucide-react";
 
 import { useRouter } from "@/core/i18n/routing";
 import { cn } from "@/core/lib/utils";
 import { useAuth } from "@/modules/identity/contexts/auth-context";
 import { logoutAction } from "@/modules/identity/actions/auth";
 import { hasScope } from "@/shared/access/permissions";
+import { NidusScope } from "@/shared/access/scopes";
 import { Button } from "@/shared/ui/button";
 import {
   CommandDialog,
@@ -34,10 +35,11 @@ export function CommandPalette() {
 
   React.useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key.toLowerCase() === "k" && (event.metaKey || event.ctrlKey)) {
-        event.preventDefault();
-        setOpen((prev) => !prev);
-      }
+      if (!event?.metaKey && !event?.ctrlKey) return;
+      if (typeof event.key !== "string") return;
+      if (event.key.toLowerCase() !== "k") return;
+      event.preventDefault();
+      setOpen((prev) => !prev);
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
@@ -122,6 +124,25 @@ export function CommandPalette() {
               </CommandGroup>
             );
           })}
+
+          {hasScope(user, NidusScope.INVOICE_WRITE) && (
+            <CommandGroup heading={t("groupActions")}>
+              <CommandItem
+                value={`${t("newInvoice")} nueva factura create invoice`}
+                onSelect={() => run("/billing/invoices?create=1")}
+              >
+                <FileText />
+                {t("newInvoice")}
+              </CommandItem>
+              <CommandItem
+                value={`${t("newQuote")} nueva cotizacion create quote`}
+                onSelect={() => run("/billing/quotes?create=1")}
+              >
+                <ClipboardList />
+                {t("newQuote")}
+              </CommandItem>
+            </CommandGroup>
+          )}
 
           <CommandGroup heading={t("groupPersonal")}>
             {SHELL_SIDEBAR_FOOTER_ITEMS.map((item) => {

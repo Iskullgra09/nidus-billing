@@ -98,6 +98,30 @@ class InvoiceUpdate(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
 
+class QuoteCreate(BaseModel):
+    customer_id: UUID
+    notes: Optional[str] = Field(default=None, max_length=2000)
+    reference_number: Optional[str] = Field(default=None, max_length=64)
+    valid_until: Optional[date] = None
+    currency: InvoiceCurrency = InvoiceCurrency.CRC
+    exchange_rate: Optional[Decimal] = Field(default=None, gt=0)
+    exchange_rate_date: Optional[date] = None
+    lines: list[InvoiceLineInput] = Field(min_length=1)
+
+
+class QuoteUpdate(BaseModel):
+    customer_id: Optional[UUID] = None
+    notes: Optional[str] = Field(default=None, max_length=2000)
+    reference_number: Optional[str] = Field(default=None, max_length=64)
+    valid_until: Optional[date] = None
+    currency: Optional[InvoiceCurrency] = None
+    exchange_rate: Optional[Decimal] = Field(default=None, gt=0)
+    exchange_rate_date: Optional[date] = None
+    lines: Optional[list[InvoiceLineInput]] = Field(default=None, min_length=1)
+
+    model_config = ConfigDict(extra="forbid")
+
+
 class InvoicePaymentCreate(BaseModel):
     amount: Decimal = Field(gt=0)
     paid_at: Optional[datetime] = None

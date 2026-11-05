@@ -175,3 +175,15 @@ async def test_inbound_reject_requires_reason(
     assert rejected.status_code == 200, rejected.text
     assert rejected.json()["data"]["mensaje_tipo"] == "3"
     assert rejected.json()["data"]["status"] == "submitted"
+
+    verify = await client.post(
+        f"/api/v1/billing/inbound-documents/{document_id}/verify-hacienda"
+    )
+    assert verify.status_code == 200, verify.text
+    assert verify.json()["data"]["status"] == "accepted"
+
+    again_reject = await client.post(
+        f"/api/v1/billing/inbound-documents/{document_id}/reject-hacienda",
+        json={"reason": "Ya fue procesado en Hacienda"},
+    )
+    assert again_reject.status_code == 409

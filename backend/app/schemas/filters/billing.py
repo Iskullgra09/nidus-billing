@@ -27,6 +27,14 @@ class InvoiceFilter(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
 
 
+class QuoteFilter(BaseModel):
+    q: Optional[str] = Field(default=None, description="Search reference or customer name")
+    status: Optional[str] = None
+    customer_id: Optional[str] = None
+
+    model_config = ConfigDict(populate_by_name=True)
+
+
 class InboundFilter(BaseModel):
     q: Optional[str] = Field(default=None, description="Search clave or emitter name/tax id")
     status: Optional[str] = None

@@ -14,6 +14,14 @@ class InvoiceStatus(StrEnum):
     VOID = "void"
 
 
+class QuoteStatus(StrEnum):
+    DRAFT = "draft"
+    SENT = "sent"
+    ACCEPTED = "accepted"
+    REJECTED = "rejected"
+    CONVERTED = "converted"
+
+
 class DocumentSeriesType(StrEnum):
     INVOICE = "invoice"
     FE = "fe"
