@@ -1,3 +1,4 @@
+from app.services.billing.dashboard_service import DashboardService
 from app.services.billing.fiscal_service import FiscalService
 from app.services.billing.hacienda_emit_service import HaciendaEmitService
 from app.services.billing.hacienda_inbound_service import HaciendaInboundService
@@ -7,9 +8,11 @@ from app.services.billing.invoice_service import InvoiceService
 from app.services.billing.item_service import ItemService
 from app.services.billing.party_service import CustomerService, SupplierService
 from app.services.billing.payment_service import PaymentService
+from app.services.billing.quote_service import QuoteService
 
 __all__ = [
     "CustomerService",
+    "DashboardService",
     "FiscalService",
     "HaciendaEmitService",
     "HaciendaInboundService",
@@ -18,5 +21,6 @@ __all__ = [
     "InvoiceService",
     "ItemService",
     "PaymentService",
+    "QuoteService",
     "SupplierService",
 ]

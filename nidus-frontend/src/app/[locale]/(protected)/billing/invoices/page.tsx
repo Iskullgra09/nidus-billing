@@ -31,6 +31,11 @@ export default async function InvoicesPage({
     <div className="space-y-6">
       <SettingsPageHeader title={t("title")} description={t("description")} />
 
+      <aside className="rounded-lg border border-border/60 bg-muted/20 px-4 py-3 text-sm text-muted-foreground space-y-1">
+        <p>{t("guidanceCondition")}</p>
+        <p>{t("guidanceIssueVoid")}</p>
+      </aside>
+
       <React.Suspense fallback={null}>
         <InvoicesTable
           invoices={page.items}

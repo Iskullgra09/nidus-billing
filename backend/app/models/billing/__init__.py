@@ -9,6 +9,7 @@ from app.models.billing.invoice_email import InvoiceEmailDelivery
 from app.models.billing.invoice_fiscal import InvoiceFiscal
 from app.models.billing.item import Item
 from app.models.billing.payment import InvoicePayment
+from app.models.billing.quote import Quote, QuoteLine
 from app.models.billing.supplier import Supplier
 
 __all__ = [
@@ -24,5 +25,7 @@ __all__ = [
     "OrganizationFiscalProfile",
     "OrganizationHaciendaCredential",
     "OrganizationInboundMailbox",
+    "Quote",
+    "QuoteLine",
     "Supplier",
 ]

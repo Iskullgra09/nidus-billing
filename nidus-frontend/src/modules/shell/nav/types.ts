@@ -13,6 +13,7 @@ export type ShellNavItemId =
   | "suppliers"
   | "items"
   | "invoices"
+  | "quotes"
   | "inbound"
   | "settings"
   | "organization"

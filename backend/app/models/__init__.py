@@ -13,6 +13,8 @@ from .billing.invoice_email import InvoiceEmailDelivery as InvoiceEmailDelivery
 from .billing.invoice_fiscal import InvoiceFiscal as InvoiceFiscal
 from .billing.item import Item as Item
 from .billing.payment import InvoicePayment as InvoicePayment
+from .billing.quote import Quote as Quote
+from .billing.quote import QuoteLine as QuoteLine
 from .billing.supplier import Supplier as Supplier
 from .identity.invitation import Invitation as Invitation
 from .identity.member import Member as Member

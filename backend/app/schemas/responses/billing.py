@@ -247,3 +247,91 @@ class InboundMailboxResponse(BaseModel):
 
     model_config = ConfigDict(from_attributes=True)
 
+
+class QuoteLineResponse(BaseModel):
+    id: UUID
+    quote_id: UUID
+    line_number: int
+    item_id: Optional[UUID] = None
+    description: str
+    sku: Optional[str] = None
+    unit: str
+    quantity: Decimal
+    unit_price: Decimal
+    tax_rate: Optional[Decimal] = None
+    tax_code: Optional[str] = None
+    cabys_code: Optional[str] = None
+    line_subtotal: Decimal
+    line_tax: Decimal
+    line_total: Decimal
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class QuoteResponse(BaseModel):
+    id: UUID
+    organization_id: UUID
+    customer_id: UUID
+    customer_name: Optional[str] = None
+    status: str
+    currency: str
+    exchange_rate: Optional[Decimal] = None
+    exchange_rate_date: Optional[date] = None
+    reference_number: Optional[str] = None
+    notes: Optional[str] = None
+    valid_until: Optional[date] = None
+    subtotal: Decimal
+    tax_total: Decimal
+    total: Decimal
+    converted_invoice_id: Optional[UUID] = None
+    lines: list[QuoteLineResponse] = []
+    created_at: datetime
+    updated_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class QuoteListItem(BaseModel):
+    id: UUID
+    organization_id: UUID
+    customer_id: UUID
+    customer_name: Optional[str] = None
+    status: str
+    currency: str
+    exchange_rate: Optional[Decimal] = None
+    exchange_rate_date: Optional[date] = None
+    reference_number: Optional[str] = None
+    valid_until: Optional[date] = None
+    subtotal: Decimal
+    tax_total: Decimal
+    total: Decimal
+    converted_invoice_id: Optional[UUID] = None
+    created_at: datetime
+    updated_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class DashboardEmitItem(BaseModel):
+    invoice_id: UUID
+    clave: Optional[str] = None
+    status: str
+    updated_at: datetime
+
+
+class DashboardFailureItem(BaseModel):
+    invoice_id: UUID
+    clave: Optional[str] = None
+    status: str
+    message: Optional[str] = None
+    updated_at: datetime
+
+
+class DashboardSummaryResponse(BaseModel):
+    open_ar: Decimal
+    open_ar_currency: str = "CRC"
+    open_invoice_count: int
+    recent_emits: list[DashboardEmitItem] = []
+    hacienda_failure_count: int
+    hacienda_failures: list[DashboardFailureItem] = []
+

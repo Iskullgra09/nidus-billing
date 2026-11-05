@@ -23,6 +23,13 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/shared/ui/dropdown-menu";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/shared/ui/select";
 import { DataTable, ColumnDef } from "@/shared/components/layout/data-table";
 import { ModalWrapper } from "@/shared/components/layout/modal-wrapper";
 import { PromptDialog } from "@/shared/components/layout/prompt-dialog";
@@ -251,18 +258,22 @@ export function InboundDocumentsTable({
             placeholder="<FacturaElectronica>...</FacturaElectronica>"
           />
           <label className="text-sm font-medium">{t("fieldSupplier")}</label>
-          <select
-            className="border-input bg-background h-9 w-full rounded-lg border px-2.5 text-sm"
-            value={supplierId}
-            onChange={(e) => setSupplierId(e.target.value)}
+          <Select
+            value={supplierId || "__auto__"}
+            onValueChange={(v) => setSupplierId(v === "__auto__" ? "" : v)}
           >
-            <option value="">{t("supplierAuto")}</option>
-            {suppliers.map((s) => (
-              <option key={s.id} value={s.id}>
-                {s.name}
-              </option>
-            ))}
-          </select>
+            <SelectTrigger className="h-9 w-full">
+              <SelectValue placeholder={t("supplierAuto")} />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="__auto__">{t("supplierAuto")}</SelectItem>
+              {suppliers.map((s) => (
+                <SelectItem key={s.id} value={s.id}>
+                  {s.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
           <div className="flex justify-end gap-2 pt-2">
             <Button variant="outline" onClick={() => setUploadOpen(false)}>
               {t("closeAction")}

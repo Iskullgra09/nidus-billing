@@ -56,6 +56,12 @@ class AuditAction(StrEnum):
     INBOUND_VERIFY = "inbound_fiscal.verify"
     INBOUND_MAILBOX_UPSERT = "inbound_mailbox.upsert"
 
+    QUOTE_CREATE = "quote.create"
+    QUOTE_UPDATE = "quote.update"
+    QUOTE_DELETE = "quote.delete"
+    QUOTE_SEND = "quote.send"
+    QUOTE_CONVERT = "quote.convert"
+
 
 class AuditResourceType(StrEnum):
     ORGANIZATION = "organization"
@@ -75,3 +81,4 @@ class AuditResourceType(StrEnum):
     INVOICE_FISCAL = "invoice_fiscal"
     INBOUND_FISCAL = "inbound_fiscal_document"
     INBOUND_MAILBOX = "inbound_mailbox"
+    QUOTE = "quote"

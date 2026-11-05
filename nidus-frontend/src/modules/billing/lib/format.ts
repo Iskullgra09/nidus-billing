@@ -1,8 +1,29 @@
 /** Billing display helpers (API may store more precision than UI shows). */
 
+/** Parse amounts typed as `1234.56`, `1234,56`, or `1.234,56`. */
+export function parseMoney(value: string | number | null | undefined): number | null {
+  return toNumber(value);
+}
+
 function toNumber(value: string | number | null | undefined): number | null {
   if (value == null || value === "") return null;
-  const n = typeof value === "number" ? value : Number(value);
+  if (typeof value === "number") return Number.isFinite(value) ? value : null;
+  const raw = value.trim();
+  if (!raw) return null;
+  let normalized = raw;
+  if (raw.includes(",") && raw.includes(".")) {
+    // Assume last separator is decimal (es-CR / en-US mixed).
+    const lastComma = raw.lastIndexOf(",");
+    const lastDot = raw.lastIndexOf(".");
+    if (lastComma > lastDot) {
+      normalized = raw.replace(/\./g, "").replace(",", ".");
+    } else {
+      normalized = raw.replace(/,/g, "");
+    }
+  } else if (raw.includes(",")) {
+    normalized = raw.replace(/\./g, "").replace(",", ".");
+  }
+  const n = Number(normalized);
   return Number.isFinite(n) ? n : null;
 }
 

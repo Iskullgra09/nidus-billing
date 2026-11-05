@@ -19,6 +19,13 @@ import {
   FormLabel,
   FormMessage,
 } from "@/shared/ui/form";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/shared/ui/select";
 import { ActionResponse } from "@/core/types/api";
 import { formatMoney, formatMoneyInput, formatPercentInput } from "../lib/format";
 import { Party } from "../types/party";
@@ -231,21 +238,23 @@ export function InvoiceFormDialog({
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>{t("billToLabel")}</FormLabel>
-                      <FormControl>
-                        <select
-                          className="border-input bg-background h-9 w-full rounded-lg border px-2.5 text-sm"
-                          {...field}
-                        >
-                          <option value="" disabled>
-                            {t("customerPlaceholder")}
-                          </option>
+                      <Select
+                        value={field.value || undefined}
+                        onValueChange={field.onChange}
+                      >
+                        <FormControl>
+                          <SelectTrigger className="h-9 w-full">
+                            <SelectValue placeholder={t("customerPlaceholder")} />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
                           {customers.map((customer) => (
-                            <option key={customer.id} value={customer.id}>
+                            <SelectItem key={customer.id} value={customer.id}>
                               {customer.name}
-                            </option>
+                            </SelectItem>
                           ))}
-                        </select>
-                      </FormControl>
+                        </SelectContent>
+                      </Select>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -256,15 +265,17 @@ export function InvoiceFormDialog({
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>{t("fieldPaymentCondition")}</FormLabel>
-                      <FormControl>
-                        <select
-                          className="border-input bg-background h-9 w-full rounded-lg border px-2.5 text-sm"
-                          {...field}
-                        >
-                          <option value="contado">{t("contado")}</option>
-                          <option value="credito">{t("credito")}</option>
-                        </select>
-                      </FormControl>
+                      <Select value={field.value} onValueChange={field.onChange}>
+                        <FormControl>
+                          <SelectTrigger className="h-9 w-full">
+                            <SelectValue />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="contado">{t("contado")}</SelectItem>
+                          <SelectItem value="credito">{t("credito")}</SelectItem>
+                        </SelectContent>
+                      </Select>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -275,15 +286,17 @@ export function InvoiceFormDialog({
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>{t("fieldCurrency")}</FormLabel>
-                      <FormControl>
-                        <select
-                          className="border-input bg-background h-9 w-full rounded-lg border px-2.5 text-sm"
-                          {...field}
-                        >
-                          <option value="CRC">CRC</option>
-                          <option value="USD">USD</option>
-                        </select>
-                      </FormControl>
+                      <Select value={field.value} onValueChange={field.onChange}>
+                        <FormControl>
+                          <SelectTrigger className="h-9 w-full">
+                            <SelectValue />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="CRC">CRC</SelectItem>
+                          <SelectItem value="USD">USD</SelectItem>
+                        </SelectContent>
+                      </Select>
                       <FormMessage />
                     </FormItem>
                   )}
